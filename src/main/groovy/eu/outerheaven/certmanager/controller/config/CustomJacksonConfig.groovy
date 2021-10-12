@@ -1,5 +1,7 @@
 package eu.outerheaven.certmanager.controller.config
 
+import com.fasterxml.jackson.databind.Module
+import com.fasterxml.jackson.databind.module.SimpleModule
 import eu.outerheaven.certmanager.controller.util.deserializers.X509CertificateDeserializer
 import eu.outerheaven.certmanager.controller.util.serializers.X509CertificateSerializer
 import org.springframework.boot.autoconfigure.AutoConfigureBefore
@@ -22,4 +24,6 @@ class CustomJacksonConfig {
             jacksonObjectMapperBuilder.deserializerByType(X509Certificate.class, new X509CertificateDeserializer())
         }
     }
+
+
 }

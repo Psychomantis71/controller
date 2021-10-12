@@ -4,14 +4,20 @@ import eu.outerheaven.certmanager.controller.entity.Certificate
 import eu.outerheaven.certmanager.controller.entity.Instance
 import eu.outerheaven.certmanager.controller.entity.Keystore
 import eu.outerheaven.certmanager.controller.form.CertificateFormGUI
+import eu.outerheaven.certmanager.controller.form.KeystoreForm
 import eu.outerheaven.certmanager.controller.repository.CertificateRepository
 import eu.outerheaven.certmanager.controller.repository.InstanceRepository
 import eu.outerheaven.certmanager.controller.repository.KeystoreRepository
+import eu.outerheaven.certmanager.controller.util.PreparedRequest
 import eu.outerheaven.certmanager.controller.util.deserializers.X509CertificateDeserializer
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.http.HttpEntity
+import org.springframework.http.HttpMethod
+import org.springframework.http.ResponseEntity
 import org.springframework.stereotype.Service
+import org.springframework.web.client.RestTemplate
 
 import java.security.cert.X509Certificate
 
@@ -62,5 +68,25 @@ class CertificateService {
         ArrayList<Certificate> certificates = repository.findAll() as ArrayList<Certificate>
         ArrayList<CertificateFormGUI> certificateFormGUIS = toFormGUI(certificates)
         return certificateFormGUIS
+    }
+
+    void fetchCert(){
+        /*PreparedRequest preparedRequest = new PreparedRequest()
+        RestTemplate restTemplate = new RestTemplate();
+        HttpEntity<Keystore> request = new HttpEntity<>(keystore, preparedRequest.getHeader(instance))
+
+
+
+        Keystore keystore = restTemplate.getForObject("http://192.168.1.23:8100/api/keystore" + "/1", Keystore.class);
+        restTemplate.getForObject("http://192.168.1.23:8100/api/keystore" + "/1",Keystore.class,request)
+        ResponseEntity<Keystore> response = restTemplate.exchange(
+                "http://192.168.1.23:8100/api/keystore" + "/1",
+                HttpMethod.POST,
+                request,
+                Keystore.class
+        );
+
+         */
+
     }
 }

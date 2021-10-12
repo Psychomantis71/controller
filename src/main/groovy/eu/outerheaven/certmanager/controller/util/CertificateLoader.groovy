@@ -207,4 +207,37 @@ class CertificateLoader {
         }
     }
 
+    String encodeX509(X509Certificate x509Certificate){
+        try{
+            ByteArrayOutputStream binaryOutput = new ByteArrayOutputStream()
+            ObjectOutputStream objectStream = new ObjectOutputStream(binaryOutput)
+            objectStream.writeObject(x509Certificate)
+            objectStream.close()
+            binaryOutput.close()
+            return Base64.getUrlEncoder().encodeToString(binaryOutput.toByteArray())
+        }catch (Exception exception){
+            LOG.error("Could not encode X509Certificate to base64 with error: " + exception)
+        }
+    }
+    X509Certificate decodeX509(String input){
+        try{
+            byte [] data = Base64.getUrlDecoder().decode(input)
+            ObjectInputStream objectInputStream = new ObjectInputStream(new ByteArrayInputStream(data))
+            X509Certificate x509Certificate = objectInputStream.readObject() as X509Certificate
+            objectInputStream.close()
+            return x509Certificate
+        }catch(Exception exception){
+            LOG.error("Could not decode  base64 to X509Certificate with error: " + exception)
+        }
+    }
+    List<String> encodeX509List(List<X509Certificate> decodedCerts){
+        List<String> encodedCerts = new ArrayList<>()
+        decodedCerts.forEach(r->encodedCerts.add(encodeX509(r)))
+        return encodedCerts
+    }
+    List<X509Certificate> decodeX509List(List<String> encodedCerts){
+        List<X509Certificate> decodedCerts = new ArrayList<>()
+        encodedCerts.forEach(r->decodedCerts.add(decodeX509(r)))
+        return encodedCerts
+    }
 }

@@ -85,6 +85,4 @@ class Keystore {
         this.certificates = certificates
     }
 
-
-
 }

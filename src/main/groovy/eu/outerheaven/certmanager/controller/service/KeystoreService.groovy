@@ -1,5 +1,6 @@
 package eu.outerheaven.certmanager.controller.service
 
+import eu.outerheaven.certmanager.controller.dto.KeystoreDto
 import eu.outerheaven.certmanager.controller.entity.Instance
 import eu.outerheaven.certmanager.controller.entity.Keystore
 import eu.outerheaven.certmanager.controller.form.InstanceForm
@@ -7,12 +8,14 @@ import eu.outerheaven.certmanager.controller.form.KeystoreForm
 import eu.outerheaven.certmanager.controller.form.KeystoreFormGUI
 import eu.outerheaven.certmanager.controller.repository.InstanceRepository
 import eu.outerheaven.certmanager.controller.repository.KeystoreRepository
+import eu.outerheaven.certmanager.controller.util.CertificateLoader
 import eu.outerheaven.certmanager.controller.util.PreparedRequest
 import eu.outerheaven.certmanager.controller.util.deserializers.X509CertificateDeserializer
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.HttpEntity
+import org.springframework.http.HttpMethod
 import org.springframework.http.ResponseEntity
 import org.springframework.stereotype.Service
 import org.springframework.web.client.RestTemplate
@@ -85,6 +88,13 @@ class KeystoreService {
         )
     }
 
+    //USE ONLY IF PARSING RESPONSE FROM AGENT, MAPPING OF ID IS DIFFRENT
+    //TODO
+    Keystore toClass(KeystoreDto keystoreDto){
+        Keystore keystore = new Keystore()
+        return  keystore
+    }
+
     ArrayList<Keystore> toClass(ArrayList<KeystoreForm> keystoreForms){
         ArrayList<Keystore> keystores = new ArrayList<>()
         keystoreForms.forEach(r ->keystores.add(toClass(r)))
@@ -113,7 +123,16 @@ class KeystoreService {
         HttpEntity<KeystoreForm> request = new HttpEntity<>(keystoreForm, preparedRequest.getHeader(instance))
         ResponseEntity<Keystore> response
         try{
-            response = restTemplate.postForEntity(instance.getAccessUrl() + api_url + "/add", request, Keystore.class)
+
+            response = restTemplate.exchange(
+                    instance.getAccessUrl() + api_url + "/add",
+                    HttpMethod.POST,
+                    request,
+                    Keystore.class
+            )
+
+            //response = restTemplate.postForEntity(instance.getAccessUrl() + api_url + "/add", request, Keystore.class)
+            LOG.info("Kurac na biciklu")
             Keystore updatedKeystore = new Keystore(
                     agentId: response.getBody().id,
                     instanceId: instance.id,
@@ -121,6 +140,32 @@ class KeystoreService {
                     description: response.getBody().description,
                     password: response.getBody().password,
                     certificates: response.getBody().certificates
+            )
+            LOG.info("Agent with ip {}, hostname {} and port {} has added a new keystore under the path {}!",instance.getIp(),instance.getHostname(),instance.getPort(), updatedKeystore.getLocation())
+            return updatedKeystore
+        } catch(Exception e){
+            LOG.error("Adding keystore to agent failed with error " + e )
+        }
+
+    }
+
+    private Keystore addToInstance_v2(KeystoreForm keystoreForm){
+        Instance instance = instanceRepository.findById(keystoreForm.getInstanceId()).get()
+        PreparedRequest preparedRequest = new PreparedRequest()
+        CertificateLoader certificateLoader = new CertificateLoader()
+        RestTemplate restTemplate = new RestTemplate();
+        HttpEntity<KeystoreForm> request = new HttpEntity<>(keystoreForm, preparedRequest.getHeader(instance))
+        ResponseEntity<Keystore> response
+        try{
+            response = restTemplate.postForEntity(instance.getAccessUrl() + api_url + "/add", request, Keystore.class)
+            //response = restTemplate.postForEntity(instance.getAccessUrl() + api_url + "/add", request, Keystore.class)
+            LOG.info("Kurac na biciklu")
+            Keystore updatedKeystore = new Keystore(
+                    agentId: response.getBody().id,
+                    instanceId: instance.id,
+                    location: response.getBody().location,
+                    description: response.getBody().description,
+                    password: response.getBody().password
             )
             LOG.info("Agent with ip {}, hostname {} and port {} has added a new keystore under the path {}!",instance.getIp(),instance.getHostname(),instance.getPort(), updatedKeystore.getLocation())
             return updatedKeystore
