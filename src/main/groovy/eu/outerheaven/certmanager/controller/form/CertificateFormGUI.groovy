@@ -16,6 +16,8 @@ class CertificateFormGUI {
 
     //Cert data
 
+    String status
+
     String subject
 
     String issuer

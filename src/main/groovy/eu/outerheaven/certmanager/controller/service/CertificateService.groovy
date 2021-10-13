@@ -1,5 +1,6 @@
 package eu.outerheaven.certmanager.controller.service
 
+import eu.outerheaven.certmanager.controller.dto.CertificateDto
 import eu.outerheaven.certmanager.controller.entity.Certificate
 import eu.outerheaven.certmanager.controller.entity.Instance
 import eu.outerheaven.certmanager.controller.entity.Keystore
@@ -19,7 +20,9 @@ import org.springframework.http.ResponseEntity
 import org.springframework.stereotype.Service
 import org.springframework.web.client.RestTemplate
 
+import javax.servlet.http.HttpServletRequest
 import java.security.cert.X509Certificate
+import java.time.LocalDateTime
 
 @Service
 class CertificateService {
@@ -41,7 +44,13 @@ class CertificateService {
 
         Keystore keystore = keystoreRepository.findById(certificate.getKeystoreId()).get()
         Instance instance = instanceRepository.findById(keystore.getInstanceId()).get()
+        String status
+        LocalDateTime dateTime = certificate.getX509Certificate().getNotBefore().to
+        if(certificate.x509Certificate.getNotBefore().before(LocalDateTime.now())){
+            status="NOT YET VALID"
+        }else if(certificate.getX509Certificate().getNotAfter()>
 
+        )
         CertificateFormGUI certificateFormGUI = new CertificateFormGUI(
                 id: certificate.id,
                 alias: certificate.alias,
@@ -89,4 +98,5 @@ class CertificateService {
          */
 
     }
+
 }
