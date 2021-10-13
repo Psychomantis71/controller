@@ -147,6 +147,7 @@ export default {
     getStatusColor(status) {
       if (status === 'VALID') return 'green';
       if (status === 'EXPIRING SOON') return 'orange';
+      if (status === 'NOT YET VALID') return 'orange';
       return 'red';
     },
     getManagedColor(status) {

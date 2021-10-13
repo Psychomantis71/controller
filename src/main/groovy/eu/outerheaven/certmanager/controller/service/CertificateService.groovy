@@ -22,7 +22,9 @@ import org.springframework.web.client.RestTemplate
 
 import javax.servlet.http.HttpServletRequest
 import java.security.cert.X509Certificate
+import java.time.Instant
 import java.time.LocalDateTime
+import java.time.ZoneId
 
 @Service
 class CertificateService {
@@ -44,13 +46,7 @@ class CertificateService {
 
         Keystore keystore = keystoreRepository.findById(certificate.getKeystoreId()).get()
         Instance instance = instanceRepository.findById(keystore.getInstanceId()).get()
-        String status
-        LocalDateTime dateTime = certificate.getX509Certificate().getNotBefore().to
-        if(certificate.x509Certificate.getNotBefore().before(LocalDateTime.now())){
-            status="NOT YET VALID"
-        }else if(certificate.getX509Certificate().getNotAfter()>
-
-        )
+        String status = certStatus(certificate.getX509Certificate().getNotBefore(), certificate.getX509Certificate().getNotAfter())
         CertificateFormGUI certificateFormGUI = new CertificateFormGUI(
                 id: certificate.id,
                 alias: certificate.alias,
@@ -62,7 +58,8 @@ class CertificateService {
                 issuer: certificate.getX509Certificate().issuerDN,
                 validFrom: certificate.getX509Certificate().notBefore,
                 validTo: certificate.getX509Certificate().notAfter,
-                serial: certificate.getX509Certificate().serialNumber
+                serial: certificate.getX509Certificate().serialNumber,
+                status: status
         )
         return certificateFormGUI
     }
@@ -98,5 +95,26 @@ class CertificateService {
          */
 
     }
+
+    String certStatus(Date notBefore, Date notAfter){
+        String status
+        Instant instant = Instant.ofEpochMilli(notBefore.getTime())
+        LocalDateTime ldtNotBefore = LocalDateTime.ofInstant(instant, ZoneId.systemDefault());
+        instant = Instant.ofEpochMilli(notAfter.getTime())
+        LocalDateTime ldtNotAfter = LocalDateTime.ofInstant(instant, ZoneId.systemDefault());
+        //IF the not before date is after current time, invalid cert
+        if(ldtNotBefore.isAfter(LocalDateTime.now())){
+            status="NOT YET VALID"
+        } else if(ldtNotAfter.isBefore(LocalDateTime.now())){
+            //IF not after is before the current date, it is expired
+            status="EXPIRED"
+        }else if(ldtNotAfter.plusDays(30).isBefore(LocalDateTime.now())){
+            //IF not after +30 days is before it will expire soon
+            status="EXPIRING SOON"
+        }else(status="VALID")
+
+        return status
+    }
+
 
 }
