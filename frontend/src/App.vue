@@ -53,7 +53,7 @@
       <v-list>
         <v-list-item class="px-2">
           <v-list-item-avatar>
-            <v-img src="https://scontent-frx5-1.xx.fbcdn.net/v/t1.6435-9/180978949_314228950059549_1005358403722529104_n.jpg?_nc_cat=105&ccb=1-5&_nc_sid=09cbfe&_nc_ohc=gDQ35FQxZhwAX9dJ9Qw&_nc_ht=scontent-frx5-1.xx&oh=36eec25bafad6096b91f03768debd94b&oe=6167838E"></v-img>
+            <v-img src="https://c.tenor.com/UuDQL5n7OoEAAAAd/laugh-funny.gif"></v-img>
           </v-list-item-avatar>
         </v-list-item>
 

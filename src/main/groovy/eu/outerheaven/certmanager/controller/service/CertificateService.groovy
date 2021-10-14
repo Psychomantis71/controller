@@ -43,7 +43,8 @@ class CertificateService {
     String api_url="/api/certificate"
 
     CertificateFormGUI toFormGUI(Certificate certificate){
-
+        X509Certificate kurac
+        kurac.getP
         Keystore keystore = keystoreRepository.findById(certificate.getKeystoreId()).get()
         Instance instance = instanceRepository.findById(keystore.getInstanceId()).get()
         String status = certStatus(certificate.getX509Certificate().getNotBefore(), certificate.getX509Certificate().getNotAfter())
@@ -103,6 +104,7 @@ class CertificateService {
         instant = Instant.ofEpochMilli(notAfter.getTime())
         LocalDateTime ldtNotAfter = LocalDateTime.ofInstant(instant, ZoneId.systemDefault());
         //IF the not before date is after current time, invalid cert
+        //TODO optimise order of this
         if(ldtNotBefore.isAfter(LocalDateTime.now())){
             status="NOT YET VALID"
         } else if(ldtNotAfter.isBefore(LocalDateTime.now())){

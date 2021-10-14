@@ -2,6 +2,7 @@ package eu.outerheaven.certmanager.controller.controller
 
 import eu.outerheaven.certmanager.controller.dto.CertificateDto
 import eu.outerheaven.certmanager.controller.form.KeystoreForm
+import eu.outerheaven.certmanager.controller.service.CaVaultService
 import eu.outerheaven.certmanager.controller.service.CertificateService
 import eu.outerheaven.certmanager.controller.service.KeystoreService
 import eu.outerheaven.certmanager.controller.util.PreparedRequest
@@ -28,6 +29,9 @@ class CertificateController {
     @Autowired
     private final CertificateService service
 
+    @Autowired
+    private final CaVaultService caVaultService
+
     @GetMapping("/all-gui")
     ResponseEntity allGUI(){
         return ResponseEntity.ok(service.getAllGUI())
@@ -42,13 +46,18 @@ class CertificateController {
     ResponseEntity update(@RequestBody List<CertificateDto> certificateDtos, HttpServletRequest request){
         PreparedRequest preparedRequest = new PreparedRequest()
         LOG.info("Request for update from IP:" + preparedRequest.getClientIpAddressIfServletRequestExist(request).toString())
-        service.update(certificateDtos, request)
+        //service.update(certificateDtos, request)
         return ResponseEntity.ok("OK")
     }
 
     @DeleteMapping("/delete")
     ResponseEntity delete(@RequestBody KeystoreForm keystoreForm){
         return ResponseEntity.ok("OK")
+    }
+
+    @GetMapping("/test-generation")
+    ResponseEntity testGen(){
+        return ResponseEntity.ok(caVaultService.main())
     }
 
 }
