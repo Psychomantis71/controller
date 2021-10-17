@@ -28,5 +28,7 @@ class CertificateFormGUI {
 
     String serial
 
+    Boolean privateKey
+
 
 }

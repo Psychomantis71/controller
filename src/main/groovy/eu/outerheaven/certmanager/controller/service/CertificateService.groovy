@@ -43,11 +43,13 @@ class CertificateService {
     String api_url="/api/certificate"
 
     CertificateFormGUI toFormGUI(Certificate certificate){
-        X509Certificate kurac
-        kurac.getP
         Keystore keystore = keystoreRepository.findById(certificate.getKeystoreId()).get()
         Instance instance = instanceRepository.findById(keystore.getInstanceId()).get()
         String status = certStatus(certificate.getX509Certificate().getNotBefore(), certificate.getX509Certificate().getNotAfter())
+        Boolean pk=false
+        if(certificate.getKey() != null){
+            pk=true
+        }
         CertificateFormGUI certificateFormGUI = new CertificateFormGUI(
                 id: certificate.id,
                 alias: certificate.alias,
@@ -60,7 +62,8 @@ class CertificateService {
                 validFrom: certificate.getX509Certificate().notBefore,
                 validTo: certificate.getX509Certificate().notAfter,
                 serial: certificate.getX509Certificate().serialNumber,
-                status: status
+                status: status,
+                privateKey: pk
         )
         return certificateFormGUI
     }

@@ -1,5 +1,7 @@
 package eu.outerheaven.certmanager.controller.dto
 
+import java.security.Key
+
 class CertificateDto {
 
     Long id
@@ -7,6 +9,8 @@ class CertificateDto {
     Long agent_id
 
     String alias
+
+    String key
 
     String encodedX509
 

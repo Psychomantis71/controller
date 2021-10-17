@@ -240,4 +240,30 @@ class CertificateLoader {
         encodedCerts.forEach(r->decodedCerts.add(decodeX509(r)))
         return encodedCerts
     }
+
+    String encodeKey(Key key){
+        try{
+            ByteArrayOutputStream binaryOutput = new ByteArrayOutputStream()
+            ObjectOutputStream objectStream = new ObjectOutputStream(binaryOutput)
+            objectStream.writeObject(key)
+            objectStream.close()
+            binaryOutput.close()
+            return Base64.getUrlEncoder().encodeToString(binaryOutput.toByteArray())
+        }catch (Exception exception){
+            LOG.error("Could not encode Key to base64 with error: " + exception)
+        }
+    }
+
+    Key decodeKey(String input){
+        try{
+            byte [] data = Base64.getUrlDecoder().decode(input)
+            ObjectInputStream objectInputStream = new ObjectInputStream(new ByteArrayInputStream(data))
+            Key key = objectInputStream.readObject() as Key
+            objectInputStream.close()
+            return key
+        }catch(Exception exception){
+            LOG.error("Could not decode base64 to key with error: " + exception)
+        }
+    }
+
 }
