@@ -95,9 +95,6 @@
                 Serial: {{ item.serial }}
                 <br>
                 Key: {{ item.privateKey }}
-                <br>
-                Key: {{ item.key }}
-                <br>
               </td>
             </template>
           </v-data-table>

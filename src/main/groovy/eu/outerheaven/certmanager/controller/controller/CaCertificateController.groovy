@@ -23,7 +23,7 @@ class CaCertificateController {
 
     @GetMapping("/all-gui")
     ResponseEntity allGUI(){
-        return ResponseEntity.ok(service.getAllGUI())
+        return ResponseEntity.ok(service.getAllCaCertsGUI())
     }
 
     @PostMapping("/add-root")

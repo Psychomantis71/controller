@@ -33,6 +33,11 @@ import org.springframework.stereotype.Service
 import java.security.*
 import java.security.cert.Certificate
 import java.security.cert.X509Certificate
+import java.text.DateFormat
+import java.text.SimpleDateFormat
+import java.time.Instant
+import java.time.LocalDateTime
+import java.time.ZoneId
 
 @Service
 class CaVaultService {
@@ -47,20 +52,19 @@ class CaVaultService {
     private static final String SIGNATURE_ALGORITHM = "SHA256withRSA"
 
     void createRootCert(CaCertificateForm caCertificateForm){
-
+        LOG.info("Starting the creation of new root cert")
         Security.addProvider(new BouncyCastleProvider())
 
         // Initialize a new KeyPair generator
         KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance(caCertificateForm.getKeyAlgorithm(), BC_PROVIDER)
         keyPairGenerator.initialize(caCertificateForm.getKeySize().toInteger())
-
+        LOG.info("Request for new root certificate: " + caCertificateForm.toString())
         // Setup start date to yesterday and end date for 1 year validity
-        Calendar calendar = Calendar.getInstance()
-        calendar.add(Calendar.DATE, -1)
-        Date startDate = caCertificateForm.getValidFrom()
+        SimpleDateFormat formatter = new SimpleDateFormat("yyyy-M-dd")
 
-        calendar.add(Calendar.YEAR, 1)
-        Date endDate = caCertificateForm.getValidTo()
+        Date startDate = formatter.parse(caCertificateForm.getDateFrom())
+
+        Date endDate = formatter.parse(caCertificateForm.getDateTo())
 
         // First step is to create a root certificate
         // First Generate a KeyPair,
@@ -86,20 +90,22 @@ class CaVaultService {
         X509Certificate rootCert = new JcaX509CertificateConverter().setProvider(BC_PROVIDER).getCertificate(rootCertHolder)
 
         CaCertificate caCertificate = new CaCertificate(
-                alias: caCertificateForm.getAlias(),
+                alias: caCertificateForm.getCertAlias(),
                 privateKey: rootKeyPair.getPrivate(),
                 x509Certificate: rootCert,
                 managed: false
 
         )
         repository.save(caCertificate)
-        writeCertToFileBase64Encoded(rootCert, "root-cert.cer")
-        exportKeyPairToKeystoreFile(rootKeyPair, rootCert, caCertificateForm.getAlias(), "root-cert.pfx", "PKCS12", "pass")
+        LOG.info("Saved new root cert")
+        //writeCertToFileBase64Encoded(rootCert, "root-cert.cer")
+        //exportKeyPairToKeystoreFile(rootKeyPair, rootCert, caCertificateForm.getAlias(), "root-cert.pfx", "PKCS12", "pass")
 
     }
 
-    void getRootCert(){
-
+    List<CaCertificateFormGUI> getAllCaCertsGUI(){
+        List<CaCertificate> all = repository.findAll() as List<CaCertificate>
+        return toFormGUI(all)
     }
 
     void createCert(X509Certificate rootCert){
@@ -285,8 +291,41 @@ class CaVaultService {
                 id: caCertificate.id,
                 alias: caCertificate.alias,
                 managed: caCertificate.managed,
-
-
+                status: certStatus(caCertificate.getX509Certificate().notBefore,caCertificate.getX509Certificate().notAfter),
+                subject: caCertificate.getX509Certificate().subjectDN,
+                issuer: caCertificate.getX509Certificate().issuerDN,
+                validFrom: caCertificate.getX509Certificate().notBefore,
+                validTo: caCertificate.getX509Certificate().notAfter,
+                serial: caCertificate.getX509Certificate().serialNumber
         )
+        return caCertificateFormGUI
     }
+
+    List<CaCertificateFormGUI> toFormGUI(List<CaCertificate> caCertificates){
+        List<CaCertificateFormGUI> certificateFormGUIS = new ArrayList<>()
+        caCertificates.forEach(r->certificateFormGUIS.add(toFormGUI(r)))
+        return certificateFormGUIS
+    }
+
+    String certStatus(Date notBefore, Date notAfter){
+        String status
+        Instant instant = Instant.ofEpochMilli(notBefore.getTime())
+        LocalDateTime ldtNotBefore = LocalDateTime.ofInstant(instant, ZoneId.systemDefault());
+        instant = Instant.ofEpochMilli(notAfter.getTime())
+        LocalDateTime ldtNotAfter = LocalDateTime.ofInstant(instant, ZoneId.systemDefault());
+        //IF the not before date is after current time, invalid cert
+        //TODO optimise order of this
+        if(ldtNotBefore.isAfter(LocalDateTime.now())){
+            status="NOT YET VALID"
+        } else if(ldtNotAfter.isBefore(LocalDateTime.now())){
+            //IF not after is before the current date, it is expired
+            status="EXPIRED"
+        }else if(ldtNotAfter.plusDays(30).isBefore(LocalDateTime.now())){
+            //IF not after +30 days is before it will expire soon
+            status="EXPIRING SOON"
+        }else(status="VALID")
+
+        return status
+    }
+
 }

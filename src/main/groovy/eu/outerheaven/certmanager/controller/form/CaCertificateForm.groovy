@@ -5,7 +5,7 @@ import groovy.transform.ToString
 @ToString(includeFields = true)
 class CaCertificateForm {
 
-    String alias
+    String certAlias
 
     String keyAlgorithm
 
@@ -13,9 +13,9 @@ class CaCertificateForm {
 
     Long keySize
 
-    Date validFrom
+    String dateFrom
 
-    Date validTo
+    String dateTo
 
     String commonName
 
