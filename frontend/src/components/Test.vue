@@ -37,11 +37,18 @@
           Renew
         </v-btn>
         <v-btn
+        dark
+        color="teal lighten-1"
+        class="ma-2"
+      >
+        Delete
+      </v-btn>
+        <v-btn
           dark
           color="teal lighten-1"
           class="ma-2"
         >
-          Delete
+          Kurac na biciklu
         </v-btn>
         <v-card>
           <v-card-title>
@@ -100,90 +107,219 @@
         </v-card>
       </v-flex>
     </v-layout>
-    <v-stepper v-model="e1">
-      <v-stepper-header>
-        <v-stepper-step
-          :complete="e1 > 1"
-          step="1"
+    <v-dialog
+      v-model="dialog"
+      max-width="1000px"
+    >
+      <template v-slot:activator="{ on, attrs }">
+        <v-btn
+          dark
+          color="teal lighten-1"
+          class="ma-2"
+          v-bind="attrs"
+          v-on="on"
         >
-          Select key and signature algorithm
-        </v-stepper-step>
+          Add keystore
+        </v-btn>
+      </template>
+      <v-card>
+        <v-card-title>
+          <span class="text-h5">Create root certificate</span>
+        </v-card-title>
 
-        <v-divider></v-divider>
+        <v-card-text>
+          <v-container>
 
-        <v-stepper-step
-          :complete="e1 > 2"
-          step="2"
-        >
-          Select keysize and validity period
-        </v-stepper-step>
+            <v-stepper v-model="e1">
+              <v-stepper-header>
+                <v-stepper-step
+                  :complete="e1 > 1"
+                  step="1"
+                >
+                  Select key and signature algorithm
+                </v-stepper-step>
 
-        <v-divider></v-divider>
+                <v-divider></v-divider>
 
-        <v-stepper-step step="3">
-          Common name and extension
-        </v-stepper-step>
-      </v-stepper-header>
+                <v-stepper-step
+                  :complete="e1 > 2"
+                  step="2"
+                >
+                  Select keysize and validity period
+                </v-stepper-step>
 
-      <v-stepper-items>
-        <v-stepper-content step="1">
-          <v-card
-            class="mb-12"
-            color="grey lighten-1"
-            height="200px"
-          ></v-card>
+                <v-divider></v-divider>
 
-          <v-btn
-            color="primary"
-            @click="e1 = 2"
-          >
-            Continue
-          </v-btn>
+                <v-stepper-step step="3">
+                  Common name and extension
+                </v-stepper-step>
+              </v-stepper-header>
 
-          <v-btn text>
-            Cancel
-          </v-btn>
-        </v-stepper-content>
+              <v-stepper-items>
+                <v-stepper-content step="1">
+                  <v-col
+                    class="d-flex"
+                    cols="12"
+                    sm="6"
+                  >
+                    <v-select
+                      :items="keyAlgorithmItems"
+                      label="Key algorithm"
+                    ></v-select>
+                  </v-col>
+                  <v-col
+                    class="d-flex"
+                    cols="12"
+                    sm="6"
+                  >
+                    <v-select
+                      :items="signatureAlgorithmItems"
+                      label="Signature algorithm"
+                    ></v-select>
+                  </v-col>
 
-        <v-stepper-content step="2">
-          <v-card
-            class="mb-12"
-            color="grey lighten-1"
-            height="200px"
-          ></v-card>
 
-          <v-btn
-            color="primary"
-            @click="e1 = 3"
-          >
-            Continue
-          </v-btn>
+                  <v-btn
+                    color="primary"
+                    @click="e1 = 2"
+                  >
+                    Continue
+                  </v-btn>
 
-          <v-btn text>
-            Cancel
-          </v-btn>
-        </v-stepper-content>
+                  <v-btn
+                    text
+                    @click="close"
+                  >
+                    Cancel
+                  </v-btn>
+                </v-stepper-content>
 
-        <v-stepper-content step="3">
-          <v-card
-            class="mb-12"
-            color="grey lighten-1"
-            height="200px"
-          ></v-card>
+                <v-stepper-content step="2">
+                  <v-col
+                    cols="12"
+                    sm="6"
+                    md="4"
+                  >
+                    <v-select
+                      :items="keySizeItems"
+                      label="Key size"
+                    ></v-select>
+                  </v-col>
+                  <v-col
+                    cols="12"
+                    sm="6"
+                    md="4"
+                  >
+                    <v-menu
+                      v-model="fromMenu"
+                      :close-on-content-click="false"
+                      :nudge-right="40"
+                      transition="scale-transition"
+                      offset-y
+                      min-width="auto"
+                    >
+                      <template v-slot:activator="{ on, attrs }">
+                        <v-text-field
+                          v-model="dateFrom"
+                          label="Valid from:"
+                          prepend-icon="mdi-calendar"
+                          readonly
+                          v-bind="attrs"
+                          v-on="on"
+                        ></v-text-field>
+                      </template>
+                      <v-date-picker
+                        v-model="dateFrom"
+                        @input="fromMenu = false"
+                      ></v-date-picker>
+                    </v-menu>
+                  </v-col>
+                  <v-col
+                    cols="12"
+                    sm="6"
+                    md="4"
+                  >
+                    <v-menu
+                      v-model="toMenu"
+                      :close-on-content-click="false"
+                      :nudge-right="40"
+                      transition="scale-transition"
+                      offset-y
+                      min-width="auto"
+                    >
+                      <template v-slot:activator="{ on, attrs }">
+                        <v-text-field
+                          v-model="dateTo"
+                          label="Valid from:"
+                          prepend-icon="mdi-calendar"
+                          readonly
+                          v-bind="attrs"
+                          v-on="on"
+                        ></v-text-field>
+                      </template>
+                      <v-date-picker
+                        v-model="dateTo"
+                        @input="toMenu = false"
+                      ></v-date-picker>
+                    </v-menu>
+                  </v-col>
+                  <v-btn
+                    color="primary"
+                    @click="e1 = 3"
+                  >
+                    Continue
+                  </v-btn>
 
-          <v-btn
-            color="primary"
-            @click="e1 = 1"
-          >
-            Finish
-          </v-btn>
+                  <v-btn
+                    text
+                    @click="close"
+                  >
+                    Cancel
+                  </v-btn>
+                </v-stepper-content>
 
-          <v-btn text>
-            Cancel
-          </v-btn>
-        </v-stepper-content>
-      </v-stepper-items>
-    </v-stepper>
+                <v-stepper-content step="3">
+                  <v-col
+                    cols="12"
+                    sm="6"
+                    md="3"
+                  >
+                    <v-text-field
+                      label="Common name"
+                    ></v-text-field>
+
+                  </v-col>
+                  <v-col
+                    cols="12"
+                    sm="6"
+                    md="3"
+                  >
+                    <v-text-field
+                      label="Alias"
+                    ></v-text-field>
+
+                  </v-col>
+
+                  <v-btn
+                    color="primary"
+                    @click="e1 = 1"
+                  >
+                    Finish
+                  </v-btn>
+
+                  <v-btn
+                    text
+                    @click="close"
+                  >
+                    Cancel
+                  </v-btn>
+                </v-stepper-content>
+              </v-stepper-items>
+            </v-stepper>
+          </v-container>
+        </v-card-text>
+      </v-card>
+    </v-dialog>
   </v-container>
 </template>
 
@@ -192,6 +328,14 @@ export default {
   data() {
     return {
       e1: 1,
+      dialog: false,
+      keyAlgorithmItems: ['RSA'],
+      signatureAlgorithmItems: ['SHA256withRSA'],
+      keySizeItems: ['2048','3072','4096'],
+      dateFrom: (new Date(Date.now() - (new Date()).getTimezoneOffset() * 60000)).toISOString().substr(0, 10),
+      dateTo: (new Date(Date.now() - (new Date()).getTimezoneOffset() * 60000)).toISOString().substr(0, 10),
+      fromMenu: false,
+      toMenu:false,
       certificatelist: [],
       selected: [],
       search: '',
@@ -237,6 +381,9 @@ export default {
     getManagedColor(status) {
       if (status === 'YES') return 'green';
       return 'red';
+    },
+    close() {
+      this.dialog = false;
     },
   },
 };

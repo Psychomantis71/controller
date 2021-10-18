@@ -1,5 +1,11 @@
 package eu.outerheaven.certmanager.controller.service
 
+import eu.outerheaven.certmanager.controller.entity.CaCertificate
+import eu.outerheaven.certmanager.controller.form.CaCertificateForm
+import eu.outerheaven.certmanager.controller.form.CaCertificateFormGUI
+import eu.outerheaven.certmanager.controller.form.CertificateFormGUI
+import eu.outerheaven.certmanager.controller.repository.CaCertificateRepository
+import eu.outerheaven.certmanager.controller.repository.CertificateRepository
 import org.bouncycastle.asn1.ASN1Encodable
 import org.bouncycastle.asn1.DERSequence
 import org.bouncycastle.asn1.x500.X500Name
@@ -21,6 +27,7 @@ import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequestBuilder
 import org.bouncycastle.util.encoders.Base64
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
 
 import java.security.*
@@ -32,25 +39,28 @@ class CaVaultService {
 
     private final Logger LOG = LoggerFactory.getLogger(CaVaultService)
 
+    @Autowired
+    private final CaCertificateRepository repository
+
     private static final String BC_PROVIDER = "BC"
     private static final String KEY_ALGORITHM = "RSA"
     private static final String SIGNATURE_ALGORITHM = "SHA256withRSA"
 
-    void createRootCert(){
+    void createRootCert(CaCertificateForm caCertificateForm){
 
         Security.addProvider(new BouncyCastleProvider())
 
         // Initialize a new KeyPair generator
-        KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance(KEY_ALGORITHM, BC_PROVIDER)
-        keyPairGenerator.initialize(2048)
+        KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance(caCertificateForm.getKeyAlgorithm(), BC_PROVIDER)
+        keyPairGenerator.initialize(caCertificateForm.getKeySize().toInteger())
 
         // Setup start date to yesterday and end date for 1 year validity
         Calendar calendar = Calendar.getInstance()
         calendar.add(Calendar.DATE, -1)
-        Date startDate = calendar.getTime()
+        Date startDate = caCertificateForm.getValidFrom()
 
         calendar.add(Calendar.YEAR, 1)
-        Date endDate = calendar.getTime()
+        Date endDate = caCertificateForm.getValidTo()
 
         // First step is to create a root certificate
         // First Generate a KeyPair,
@@ -60,9 +70,9 @@ class CaVaultService {
         BigInteger rootSerialNum = new BigInteger(Long.toString(new SecureRandom().nextLong()))
 
         // Issued By and Issued To same for root certificate
-        X500Name rootCertIssuer = new X500Name("CN=OSCM-root")
+        X500Name rootCertIssuer = new X500Name("CN=" + caCertificateForm.getCommonName())
         X500Name rootCertSubject = rootCertIssuer
-        ContentSigner rootCertContentSigner = new JcaContentSignerBuilder(SIGNATURE_ALGORITHM).setProvider(BC_PROVIDER).build(rootKeyPair.getPrivate())
+        ContentSigner rootCertContentSigner = new JcaContentSignerBuilder(caCertificateForm.getSignatureAlgorithm()).setProvider(BC_PROVIDER).build(rootKeyPair.getPrivate())
         X509v3CertificateBuilder rootCertBuilder = new JcaX509v3CertificateBuilder(rootCertIssuer, rootSerialNum, startDate, endDate, rootCertSubject, rootKeyPair.getPublic())
 
         // Add Extensions
@@ -75,8 +85,20 @@ class CaVaultService {
         X509CertificateHolder rootCertHolder = rootCertBuilder.build(rootCertContentSigner)
         X509Certificate rootCert = new JcaX509CertificateConverter().setProvider(BC_PROVIDER).getCertificate(rootCertHolder)
 
+        CaCertificate caCertificate = new CaCertificate(
+                alias: caCertificateForm.getAlias(),
+                privateKey: rootKeyPair.getPrivate(),
+                x509Certificate: rootCert,
+                managed: false
+
+        )
+        repository.save(caCertificate)
         writeCertToFileBase64Encoded(rootCert, "root-cert.cer")
-        exportKeyPairToKeystoreFile(rootKeyPair, rootCert, "root-cert", "root-cert.pfx", "PKCS12", "pass")
+        exportKeyPairToKeystoreFile(rootKeyPair, rootCert, caCertificateForm.getAlias(), "root-cert.pfx", "PKCS12", "pass")
+
+    }
+
+    void getRootCert(){
 
     }
 
@@ -258,5 +280,13 @@ class CaVaultService {
         LOG.info("Read private key is: " + key)
     }
 
+    CaCertificateFormGUI toFormGUI(CaCertificate caCertificate){
+        CaCertificateFormGUI caCertificateFormGUI = new CaCertificateFormGUI(
+                id: caCertificate.id,
+                alias: caCertificate.alias,
+                managed: caCertificate.managed,
 
+
+        )
+    }
 }

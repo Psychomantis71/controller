@@ -57,7 +57,8 @@ class CertificateController {
 
     @GetMapping("/test-generation")
     ResponseEntity testGen(){
-        return ResponseEntity.ok(caVaultService.main())
+        caVaultService.main()
+        return ResponseEntity.ok("OK")
     }
 
 }

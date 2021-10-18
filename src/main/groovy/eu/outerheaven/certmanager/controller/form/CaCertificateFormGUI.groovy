@@ -1,22 +1,16 @@
 package eu.outerheaven.certmanager.controller.form
 
-class CertificateFormGUI {
+class CaCertificateFormGUI {
 
     Long id
 
     String alias
 
-    String keystorePath
-
-    String instanceName
-
-    String hostname
-
     Boolean managed
 
-    //Cert data
-
     String status
+
+    //Cert data
 
     String subject
 
@@ -28,5 +22,4 @@ class CertificateFormGUI {
 
     String serial
 
-    Boolean privateKey
 }
