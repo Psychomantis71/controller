@@ -58,7 +58,6 @@ class CaVaultService {
         // Initialize a new KeyPair generator
         KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance(caCertificateForm.getKeyAlgorithm(), BC_PROVIDER)
         keyPairGenerator.initialize(caCertificateForm.getKeySize().toInteger())
-        LOG.info("Request for new root certificate: " + caCertificateForm.toString())
         // Setup start date to yesterday and end date for 1 year validity
         SimpleDateFormat formatter = new SimpleDateFormat("yyyy-M-dd")
 
@@ -108,7 +107,7 @@ class CaVaultService {
         return toFormGUI(all)
     }
 
-    void createCert(X509Certificate rootCert){
+    void createSignedCert(X509Certificate rootCert){
 
         KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance(KEY_ALGORITHM, BC_PROVIDER)
         keyPairGenerator.initialize(2048)
@@ -148,6 +147,30 @@ class CaVaultService {
         issuedCertBuilder.addExtension(Extension.authorityKeyIdentifier, false, issuedCertExtUtils.createAuthorityKeyIdentifier(rootCert))
         issuedCertBuilder.addExtension(Extension.subjectKeyIdentifier, false, issuedCertExtUtils.createSubjectKeyIdentifier(csr.getSubjectPublicKeyInfo()))
 
+        /*
+
+        CN: CommonName
+OU: OrganizationalUnit
+O: Organization
+L: Locality
+S: StateOrProvinceName
+C: CountryName
+
+
+CaCertificate
+keyAlgorithm
+signatureAlgorithm
+keySize
+dateFrom
+dateTo
+Subject
+certAlias
+Intermediate (bool)
+dnsname
+ipaddres
+
+        */
+         */
         // Add intended key usage extension if needed
         issuedCertBuilder.addExtension(Extension.keyUsage, false, new KeyUsage(KeyUsage.keyEncipherment))
 
