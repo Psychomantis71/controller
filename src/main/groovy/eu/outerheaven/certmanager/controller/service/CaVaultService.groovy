@@ -4,6 +4,7 @@ import eu.outerheaven.certmanager.controller.entity.CaCertificate
 import eu.outerheaven.certmanager.controller.form.CaCertificateForm
 import eu.outerheaven.certmanager.controller.form.CaCertificateFormGUI
 import eu.outerheaven.certmanager.controller.form.CertificateFormGUI
+import eu.outerheaven.certmanager.controller.form.NewSignedCertificateForm
 import eu.outerheaven.certmanager.controller.repository.CaCertificateRepository
 import eu.outerheaven.certmanager.controller.repository.CertificateRepository
 import org.bouncycastle.asn1.ASN1Encodable
@@ -107,84 +108,83 @@ class CaVaultService {
         return toFormGUI(all)
     }
 
-    void createSignedCert(X509Certificate rootCert){
+    void createSignedCert(NewSignedCertificateForm newSignedCertificateForm){
 
-        KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance(KEY_ALGORITHM, BC_PROVIDER)
-        keyPairGenerator.initialize(2048)
+        KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance(newSignedCertificateForm.keyAlgorithm, BC_PROVIDER)
+        keyPairGenerator.initialize(newSignedCertificateForm.keySize.toInteger())
 
-        Calendar calendar = Calendar.getInstance()
-        calendar.add(Calendar.DATE, -1)
-        Date startDate = calendar.getTime()
+        CaCertificate parentCert = repository.findById(newSignedCertificateForm.signingCertId).get()
 
-        calendar.add(Calendar.YEAR, 1)
-        Date endDate = calendar.getTime()
+        SimpleDateFormat formatter = new SimpleDateFormat("yyyy-M-dd")
+
+        Date startDate = formatter.parse(newSignedCertificateForm.getDateFrom())
+
+        Date endDate = formatter.parse(newSignedCertificateForm.getDateTo())
 
         // Generate a new KeyPair and sign it using the Root Cert Private Key
         // by generating a CSR (Certificate Signing Request)
-        X500Name issuedCertSubject = new X500Name("CN=issued-cert")
+        String issuedSubject = "CN=" + newSignedCertificateForm.commonName
+
+        if(newSignedCertificateForm.organization == null || newSignedCertificateForm.organization == ""){
+            issuedSubject=issuedSubject + ",O="  + newSignedCertificateForm.organization
+        }
+        if(newSignedCertificateForm.organizationalUnit == null || newSignedCertificateForm.organizationalUnit == ""){
+            issuedSubject=issuedSubject +",OU=" +newSignedCertificateForm.organizationalUnit
+        }
+        if(newSignedCertificateForm.locality == null || newSignedCertificateForm.locality == ""){
+            issuedSubject=issuedSubject + ",L="  + newSignedCertificateForm.locality
+        }
+        if(newSignedCertificateForm.stateOrProvinceName == null || newSignedCertificateForm.stateOrProvinceName == ""){
+            issuedSubject=issuedSubject + ",S="  + newSignedCertificateForm.stateOrProvinceName
+        }
+        if(newSignedCertificateForm.countryName == null || newSignedCertificateForm.countryName == ""){
+            issuedSubject=issuedSubject + ",C="  + newSignedCertificateForm.countryName
+        }
+        X500Name issuedCertSubject = new X500Name(issuedSubject)
         BigInteger issuedCertSerialNum = new BigInteger(Long.toString(new SecureRandom().nextLong()))
         KeyPair issuedCertKeyPair = keyPairGenerator.generateKeyPair()
 
         PKCS10CertificationRequestBuilder p10Builder = new JcaPKCS10CertificationRequestBuilder(issuedCertSubject, issuedCertKeyPair.getPublic())
-        JcaContentSignerBuilder csrBuilder = new JcaContentSignerBuilder(SIGNATURE_ALGORITHM).setProvider(BC_PROVIDER)
+        JcaContentSignerBuilder csrBuilder = new JcaContentSignerBuilder(newSignedCertificateForm.signatureAlgorithm).setProvider(BC_PROVIDER)
 
         // Sign the new KeyPair with the root cert Private Key
-        ContentSigner csrContentSigner = csrBuilder.build(rootKeyPair.getPrivate())
+        ContentSigner csrContentSigner = csrBuilder.build(parentCert.getPrivateKey())
         PKCS10CertificationRequest csr = p10Builder.build(csrContentSigner)
 
         // Use the Signed KeyPair and CSR to generate an issued Certificate
         // Here serial number is randomly generated. In general, CAs use
         // a sequence to generate Serial number and avoid collisions
-        X509v3CertificateBuilder issuedCertBuilder = new X509v3CertificateBuilder(rootCertIssuer, issuedCertSerialNum, startDate, endDate, csr.getSubject(), csr.getSubjectPublicKeyInfo())
+        X500Name parentCertSubject = new X500Name(parentCert.getX509Certificate().subjectDN.toString())
+        X509v3CertificateBuilder issuedCertBuilder = new X509v3CertificateBuilder(parentCertSubject, issuedCertSerialNum, startDate, endDate, csr.getSubject(), csr.getSubjectPublicKeyInfo())
 
         JcaX509ExtensionUtils issuedCertExtUtils = new JcaX509ExtensionUtils()
 
         // Add Extensions
         // Use BasicConstraints to say that this Cert is not a CA
-        issuedCertBuilder.addExtension(Extension.basicConstraints, true, new BasicConstraints(false))
+        if(newSignedCertificateForm.intermediate){
+            issuedCertBuilder.addExtension(Extension.basicConstraints, true, new BasicConstraints(true))
+        }else {
+            issuedCertBuilder.addExtension(Extension.basicConstraints, true, new BasicConstraints(false))
+        }
 
         // Add Issuer cert identifier as Extension
-        issuedCertBuilder.addExtension(Extension.authorityKeyIdentifier, false, issuedCertExtUtils.createAuthorityKeyIdentifier(rootCert))
+        issuedCertBuilder.addExtension(Extension.authorityKeyIdentifier, false, issuedCertExtUtils.createAuthorityKeyIdentifier(parentCert.getX509Certificate()))
         issuedCertBuilder.addExtension(Extension.subjectKeyIdentifier, false, issuedCertExtUtils.createSubjectKeyIdentifier(csr.getSubjectPublicKeyInfo()))
 
-        /*
-
-        CN: CommonName
-OU: OrganizationalUnit
-O: Organization
-L: Locality
-S: StateOrProvinceName
-C: CountryName
-
-
-CaCertificate
-keyAlgorithm
-signatureAlgorithm
-keySize
-dateFrom
-dateTo
-Subject
-certAlias
-Intermediate (bool)
-dnsname
-ipaddres
-
-        */
-         */
         // Add intended key usage extension if needed
         issuedCertBuilder.addExtension(Extension.keyUsage, false, new KeyUsage(KeyUsage.keyEncipherment))
 
         // Add DNS name is cert is to used for SSL
         issuedCertBuilder.addExtension(Extension.subjectAlternativeName, false, new DERSequence(new ASN1Encodable[] {
-                new GeneralName(GeneralName.dNSName, "raspi.lan"),
-                new GeneralName(GeneralName.iPAddress, "192.168.1.203")
+                new GeneralName(GeneralName.dNSName, newSignedCertificateForm.getDnsname()),
+                new GeneralName(GeneralName.iPAddress, newSignedCertificateForm.getIpaddres())
         }))
 
         X509CertificateHolder issuedCertHolder = issuedCertBuilder.build(csrContentSigner)
         X509Certificate issuedCert  = new JcaX509CertificateConverter().setProvider(BC_PROVIDER).getCertificate(issuedCertHolder)
 
         // Verify the issued cert signature against the root (issuer) cert
-        issuedCert.verify(rootCert.getPublicKey(), BC_PROVIDER)
+        issuedCert.verify(parentCert.getX509Certificate().getPublicKey(), BC_PROVIDER)
 
         writeCertToFileBase64Encoded(issuedCert, "issued-cert.cer")
         exportKeyPairToKeystoreFile(issuedCertKeyPair, issuedCert, "issued-cert", "issued-cert.pfx", "PKCS12", "pass")
