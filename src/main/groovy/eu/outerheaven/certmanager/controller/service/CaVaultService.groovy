@@ -185,7 +185,17 @@ class CaVaultService {
 
         // Verify the issued cert signature against the root (issuer) cert
         issuedCert.verify(parentCert.getX509Certificate().getPublicKey(), BC_PROVIDER)
+        if(newSignedCertificateForm.intermediate){
+            CaCertificate caCertificate = new CaCertificate(
+                    alias: newSignedCertificateForm.certAlias,
+                    privateKey: issuedCertKeyPair.getPrivate(),
+                    x509Certificate: issuedCert,
+                    managed: false
+            )
+            repository.save(caCertificate)
+        }else{
 
+        }
         writeCertToFileBase64Encoded(issuedCert, "issued-cert.cer")
         exportKeyPairToKeystoreFile(issuedCertKeyPair, issuedCert, "issued-cert", "issued-cert.pfx", "PKCS12", "pass")
         LOG.info("CA signed cert has been created")

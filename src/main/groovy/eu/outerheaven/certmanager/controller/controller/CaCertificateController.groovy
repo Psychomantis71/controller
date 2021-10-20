@@ -1,6 +1,7 @@
 package eu.outerheaven.certmanager.controller.controller
 
 import eu.outerheaven.certmanager.controller.form.CaCertificateForm
+import eu.outerheaven.certmanager.controller.form.NewSignedCertificateForm
 import eu.outerheaven.certmanager.controller.service.CaVaultService
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -29,6 +30,11 @@ class CaCertificateController {
     @PostMapping("/add-root")
     ResponseEntity addRoot(@RequestBody CaCertificateForm caCertificateForm){
         return ResponseEntity.ok(service.createRootCert(caCertificateForm))
+    }
+
+    @PostMapping("/add-signed")
+    ResponseEntity addSigned(@RequestBody NewSignedCertificateForm newSignedCertificateForm){
+        return ResponseEntity.ok(service.createSignedCert(newSignedCertificateForm))
     }
 
 }
