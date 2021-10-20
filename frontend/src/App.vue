@@ -128,7 +128,8 @@ export default {
           { title: 'Certificates', path: '/certificates', icon: 'badge' },
           { title: 'Upload file to agent', path: '/secured', icon: 'upload' },
           { title: 'Admin settings', path: '/home', icon: 'admin_panel_settings' },
-          { title: 'Testne pizdarije', path: '/test', icon: 'admin_panel_settings' },
+          { title: 'Ca vault', path: '/CaVault', icon: 'admin_panel_settings' },
+          { title: 'Test', path: '/Test', icon: 'admin_panel_settings' },
         ];
       }
       return [];

@@ -316,147 +316,10 @@
             </template>
           </v-data-table>
         </v-card>
-
-
-        <v-stepper v-model="e1" alt-labels>
-          <v-stepper-header>
-            <template v-for="n in steps">
-              <v-stepper-step
-                :key="`${n}-step`"
-                :complete="e1 > n"
-                :step="n"
-                editable
-
-              >
-                Random shit
-              </v-stepper-step>
-
-              <v-divider
-                v-if="n !== steps"
-                :key="n"
-              ></v-divider>
-            </template>
-          </v-stepper-header>
-
-          <v-stepper-items>
-            <v-stepper-content step="1">
-              <v-card
-                class="mb-12"
-                color="grey lighten-1"
-                height="200px"
-              ></v-card>
-              <v-card-text>
-                <v-select
-                  v-model="steps"
-                  :items="testItem"
-                  label="Select certificate destination"
-                  item-value="choiceValue"
-                  item-text="choiceName"
-                ></v-select>
-              </v-card-text>
-              <v-btn
-                color="primary"
-                @click="e1 = 2"
-              >
-                Continue
-              </v-btn>
-
-              <v-btn text>
-                Cancel
-              </v-btn>
-            </v-stepper-content>
-
-            <v-stepper-content step="2">
-              <v-card
-                class="mb-12"
-                color="grey lighten-1"
-                height="200px"
-              ></v-card>
-
-              <v-btn
-                color="primary"
-                @click="e1 = 3"
-              >
-                Continue
-              </v-btn>
-
-              <v-btn text>
-                Cancel
-              </v-btn>
-            </v-stepper-content>
-
-            <v-stepper-content step="3">
-              <v-card
-                class="mb-12"
-                color="grey lighten-1"
-                height="200px"
-              ></v-card>
-
-              <v-btn
-                color="primary"
-                @click="e1 = 4"
-              >
-                Continue
-              </v-btn>
-
-              <v-btn text>
-                Cancel
-              </v-btn>
-            </v-stepper-content>
-
-            <v-stepper-content step="4">
-              <v-card
-                class="mb-12"
-                color="grey lighten-1"
-                height="200px"
-              ></v-card>
-
-              <v-btn
-                color="primary"
-                @click="e1 = 5"
-              >
-                Continue
-              </v-btn>
-
-              <v-btn text>
-                Cancel
-              </v-btn>
-            </v-stepper-content>
-
-            <v-stepper-content step="5">
-              <v-card
-                class="mb-12"
-                color="grey lighten-1"
-                height="200px"
-              ></v-card>
-
-              <v-btn
-                color="primary"
-                @click="e1 = 1"
-              >
-                Continue
-              </v-btn>
-
-              <v-btn text>
-                Cancel
-              </v-btn>
-            </v-stepper-content>
-          </v-stepper-items>
-        </v-stepper>
-
       </v-flex>
     </v-layout>
   </v-container>
 </template>
-
-<style>
-.v-stepper__step:not(.v-stepper__step--active):not(.v-stepper__step--complete):not(.v-stepper__step--error) .v-stepper__step__step {
-  color: transparent;
-}
-.v-stepper__step--active:not(.v-stepper__step--complete) .v-stepper__step__step {
-  color: transparent;
-}
-</style>
 
 <script>
 export default {
@@ -464,11 +327,6 @@ export default {
     return {
       e1: 1,
       dialog: false,
-      steps: "123",
-      testItem:[ { choiceName: 'Deploy directly to keystore(s)', choiceValue: '124'},
-        { choiceName: 'Intermediate certificate', choiceValue: '135' },
-        { choiceName: 'Export directly', choiceValue: '135' }
-      ],
       newCa:{
         keyAlgorithm: '',
         signatureAlgorithm: '',
@@ -531,13 +389,6 @@ export default {
 
       console.log('CA data:', this.newCa)
       this.close()
-    },
-    nextStep (n) {
-      if (n === this.steps) {
-        this.e1 = 1
-      } else {
-        this.e1 = n + 1
-      }
     },
     getStatusColor(status) {
       if (status === 'VALID') return 'green';

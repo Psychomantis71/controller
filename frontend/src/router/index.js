@@ -7,7 +7,8 @@ import Secured from '../components/Secured.vue';
 import Instances from '../components/Instances';
 import Keystores from "@/components/Keystores";
 import Certificates from "@/components/Certificates";
-import Test from "@/components/Test";
+import CaVault from "@/components/CaVault"
+import Test from "@/components/Test"
 Vue.use(Router);
 
 const router = new Router({
@@ -34,8 +35,13 @@ const router = new Router({
       component: Instances,
     },
     {
+      path: '/CaVault',
+      name: 'CaVault',
+      component: CaVault,
+    },
+    {
       path: '/test',
-      name: 'Test',
+      name: 'test',
       component: Test,
     },
     {

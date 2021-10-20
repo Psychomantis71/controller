@@ -193,9 +193,10 @@ class CaVaultService {
                     managed: false
             )
             repository.save(caCertificate)
-        }else{
-
         }
+        //else{
+
+        //}
         writeCertToFileBase64Encoded(issuedCert, "issued-cert.cer")
         exportKeyPairToKeystoreFile(issuedCertKeyPair, issuedCert, "issued-cert", "issued-cert.pfx", "PKCS12", "pass")
         LOG.info("CA signed cert has been created")
