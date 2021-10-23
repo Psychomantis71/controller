@@ -121,23 +121,27 @@ class CaVaultService {
 
         Date endDate = formatter.parse(newSignedCertificateForm.getDateTo())
 
+
+        LOG.info("Recieved request: " + newSignedCertificateForm.toString())
+
+
         // Generate a new KeyPair and sign it using the Root Cert Private Key
         // by generating a CSR (Certificate Signing Request)
         String issuedSubject = "CN=" + newSignedCertificateForm.commonName
 
-        if(newSignedCertificateForm.organization == null || newSignedCertificateForm.organization == ""){
+        if(newSignedCertificateForm.organization != null && newSignedCertificateForm.organization != ""){
             issuedSubject=issuedSubject + ",O="  + newSignedCertificateForm.organization
         }
-        if(newSignedCertificateForm.organizationalUnit == null || newSignedCertificateForm.organizationalUnit == ""){
+        if(newSignedCertificateForm.organizationalUnit != null && newSignedCertificateForm.organizationalUnit != ""){
             issuedSubject=issuedSubject +",OU=" +newSignedCertificateForm.organizationalUnit
         }
-        if(newSignedCertificateForm.locality == null || newSignedCertificateForm.locality == ""){
+        if(newSignedCertificateForm.locality != null && newSignedCertificateForm.locality != ""){
             issuedSubject=issuedSubject + ",L="  + newSignedCertificateForm.locality
         }
-        if(newSignedCertificateForm.stateOrProvinceName == null || newSignedCertificateForm.stateOrProvinceName == ""){
-            issuedSubject=issuedSubject + ",S="  + newSignedCertificateForm.stateOrProvinceName
+        if(newSignedCertificateForm.stateOrProvinceName != null && newSignedCertificateForm.stateOrProvinceName != ""){
+            issuedSubject=issuedSubject + ",ST="  + newSignedCertificateForm.stateOrProvinceName
         }
-        if(newSignedCertificateForm.countryName == null || newSignedCertificateForm.countryName == ""){
+        if(newSignedCertificateForm.countryName != null && newSignedCertificateForm.countryName != ""){
             issuedSubject=issuedSubject + ",C="  + newSignedCertificateForm.countryName
         }
         X500Name issuedCertSubject = new X500Name(issuedSubject)
@@ -150,7 +154,6 @@ class CaVaultService {
         // Sign the new KeyPair with the root cert Private Key
         ContentSigner csrContentSigner = csrBuilder.build(parentCert.getPrivateKey())
         PKCS10CertificationRequest csr = p10Builder.build(csrContentSigner)
-
         // Use the Signed KeyPair and CSR to generate an issued Certificate
         // Here serial number is randomly generated. In general, CAs use
         // a sequence to generate Serial number and avoid collisions
@@ -321,11 +324,18 @@ class CaVaultService {
     }
 
     CaCertificateFormGUI toFormGUI(CaCertificate caCertificate){
+        String level
+        if(caCertificate.x509Certificate.issuerDN == caCertificate.getX509Certificate().subjectDN){
+            level = "ROOT"
+        }else{
+            level="INTERMEDIATE"
+        }
         CaCertificateFormGUI caCertificateFormGUI = new CaCertificateFormGUI(
                 id: caCertificate.id,
                 alias: caCertificate.alias,
                 managed: caCertificate.managed,
                 status: certStatus(caCertificate.getX509Certificate().notBefore,caCertificate.getX509Certificate().notAfter),
+                level: level,
                 subject: caCertificate.getX509Certificate().subjectDN,
                 issuer: caCertificate.getX509Certificate().issuerDN,
                 validFrom: caCertificate.getX509Certificate().notBefore,

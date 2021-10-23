@@ -10,6 +10,8 @@ class CaCertificateFormGUI {
 
     String status
 
+    String level
+
     //Cert data
 
     String subject
