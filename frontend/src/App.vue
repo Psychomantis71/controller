@@ -11,7 +11,7 @@
           tag="span"
           style="cursor: pointer"
         >
-          BOBO GOSPODAR CERTIFIKATA
+          OPEN SOURCE CERTIFICATE MANAGER
         </router-link>
       </v-toolbar-title>
       <v-spacer />
@@ -53,7 +53,7 @@
       <v-list>
         <v-list-item class="px-2">
           <v-list-item-avatar>
-            <v-img src="https://c.tenor.com/UuDQL5n7OoEAAAAd/laugh-funny.gif"></v-img>
+            <v-img src="../public/certificate-flat.png"></v-img>
           </v-list-item-avatar>
         </v-list-item>
 
@@ -130,6 +130,7 @@ export default {
           { title: 'Admin settings', path: '/home', icon: 'admin_panel_settings' },
           { title: 'Ca vault', path: '/CaVault', icon: 'admin_panel_settings' },
           { title: 'Test', path: '/Test', icon: 'admin_panel_settings' },
+          { title: 'Upload to agent', path: '/uploadtoagent', icon: 'upload' },
         ];
       }
       return [];

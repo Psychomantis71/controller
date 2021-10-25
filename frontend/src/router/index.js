@@ -9,6 +9,7 @@ import Keystores from "@/components/Keystores";
 import Certificates from "@/components/Certificates";
 import CaVault from "@/components/CaVault"
 import Test from "@/components/Test"
+import UploadToAgent from "@/components/UploadToAgent";
 Vue.use(Router);
 
 const router = new Router({
@@ -52,6 +53,11 @@ const router = new Router({
       path: '/certificates',
       name: 'Certificates',
       component: Certificates,
+    },
+    {
+      path: '/uploadtoagent',
+      name: 'UploadToAgent',
+      component: UploadToAgent,
     },
     {
       path: '/signIn',

@@ -34,15 +34,16 @@
           color="teal lighten-1"
           class="ma-2"
         >
-          Renew
+          Delete
         </v-btn>
         <v-btn
-        dark
-        color="teal lighten-1"
-        class="ma-2"
-      >
-        Delete
-      </v-btn>
+          dark
+          color="teal lighten-1"
+          class="ma-2"
+          @click="sizeOfSelected"
+        >
+          Create signed certificate
+        </v-btn>
         <v-dialog
           v-model="dialog"
           max-width="1000px"
@@ -290,6 +291,14 @@
                 {{ item.status }}
               </v-chip>
             </template>
+            <template v-slot:item.level="{ item }">
+              <v-chip
+                :color="getLevelColour(item.level)"
+                dark
+              >
+                {{ item.level }}
+              </v-chip>
+            </template>
             <template v-slot:item.managed="{ item }">
               <v-chip
                 :color="getManagedColor(item.managed)"
@@ -316,17 +325,403 @@
             </template>
           </v-data-table>
         </v-card>
+
+
+
+        <v-dialog
+          v-model="dialogSigned"
+          max-width="1000px"
+        >
+          <v-card>
+            <v-card-title>
+              <span class="text-h5">Create signed certificate</span>
+            </v-card-title>
+
+
+            <v-stepper v-model="e1">
+              <v-stepper-header>
+                <template v-for="n in steps">
+                  <v-stepper-step
+                    :key="`${n}-step`"
+                    :complete="e1 > n"
+                    :step="n"
+                    editable
+
+                  >
+                    Random shit
+                  </v-stepper-step>
+
+                  <v-divider
+                    v-if="n < steps.length"
+                    :key="n"
+                  ></v-divider>
+                </template>
+              </v-stepper-header>
+
+              <v-stepper-items>
+                <v-stepper-content
+                  step="1"
+                  :key="`1-content`"
+                >
+                  <v-card-text>
+                    <v-select
+                      v-model="steps"
+                      :items="testItem"
+                      label="Select certificate destination"
+                      item-value="choiceValue"
+                      item-text="choiceName"
+                    ></v-select>
+                  </v-card-text>
+                  <v-btn
+                    color="primary"
+                    @click="e1 = 2"
+                  >
+                    Continue
+                  </v-btn>
+
+                  <v-btn
+                    text
+                    @click="closeSigned"
+                  >
+                    Cancel
+                  </v-btn>
+                </v-stepper-content>
+
+                <v-stepper-content
+                  step="2"
+                  :key="`2-content`"
+                >
+
+                  <v-col
+                    class="d-flex"
+                    cols="12"
+                    sm="6"
+                  >
+                    <v-select
+                      v-model="newSignedCert.keyAlgorithm"
+                      :items="keyAlgorithmItems"
+                      label="Key algorithm"
+                    ></v-select>
+                  </v-col>
+                  <v-col
+                    class="d-flex"
+                    cols="12"
+                    sm="6"
+                  >
+                    <v-select
+                      v-model="newSignedCert.signatureAlgorithm"
+                      :items="signatureAlgorithmItems"
+                      label="Signature algorithm"
+                    ></v-select>
+                  </v-col>
+
+
+                  <v-col
+                    cols="12"
+                    sm="6"
+                    md="4"
+                  >
+                    <v-select
+                      v-model="newSignedCert.keySize"
+                      :items="keySizeItems"
+                      label="Key size"
+                    ></v-select>
+                  </v-col>
+                  <v-col
+                    cols="12"
+                    sm="6"
+                    md="4"
+                  >
+                    <v-menu
+                      v-model="fromMenuSigned"
+                      :close-on-content-click="false"
+                      :nudge-right="40"
+                      transition="scale-transition"
+                      offset-y
+                      min-width="auto"
+                    >
+                      <template v-slot:activator="{ on, attrs }">
+                        <v-text-field
+                          v-model="newSignedCert.dateFrom"
+                          label="Valid from:"
+                          prepend-icon="mdi-calendar"
+                          readonly
+                          v-bind="attrs"
+                          v-on="on"
+                        ></v-text-field>
+                      </template>
+                      <v-date-picker
+                        v-model="newSignedCert.dateFrom"
+                        @input="fromMenuSigned = false"
+                      ></v-date-picker>
+                    </v-menu>
+                  </v-col>
+                  <v-col
+                    cols="12"
+                    sm="6"
+                    md="4"
+                  >
+                    <v-menu
+                      v-model="toMenuSigned"
+                      :close-on-content-click="false"
+                      :nudge-right="40"
+                      transition="scale-transition"
+                      offset-y
+                      min-width="auto"
+                    >
+                      <template v-slot:activator="{ on, attrs }">
+                        <v-text-field
+                          v-model="newSignedCert.dateTo"
+                          label="Valid from:"
+                          prepend-icon="mdi-calendar"
+                          readonly
+                          v-bind="attrs"
+                          v-on="on"
+                        ></v-text-field>
+                      </template>
+                      <v-date-picker
+                        v-model="newSignedCert.dateTo"
+                        @input="toMenuSigned = false"
+                      ></v-date-picker>
+                    </v-menu>
+                  </v-col>
+
+
+
+                  <v-btn
+                    color="primary"
+                    @click="e1 = 3"
+                  >
+                    Continue
+                  </v-btn>
+
+                  <v-btn
+                    text
+                    @click="closeSigned"
+                  >
+                    Cancel
+                  </v-btn>
+                </v-stepper-content>
+
+                <v-stepper-content
+                  step="3"
+                  :key="`3-content`"
+                >
+
+                  <v-col
+                    cols="12"
+                    sm="6"
+                    md="3"
+                  >
+                    <v-text-field
+                      v-model="newSignedCert.certAlias"
+                      label="Alias"
+                    ></v-text-field>
+                  </v-col>
+
+                  <v-col
+                    cols="12"
+                    sm="6"
+                    md="3"
+                  >
+                    <v-text-field
+                      v-model="newSignedCert.commonName"
+                      label="Common name"
+                    ></v-text-field>
+                  </v-col>
+
+                  <v-col
+                    cols="12"
+                    sm="6"
+                    md="3"
+                  >
+                    <v-text-field
+                      v-model="newSignedCert.organization"
+                      label="Organization"
+                    ></v-text-field>
+                  </v-col>
+
+                  <v-col
+                    cols="12"
+                    sm="6"
+                    md="3"
+                  >
+                    <v-text-field
+                      v-model="newSignedCert.organizationalUnit"
+                      label="Organizational Unit"
+                    ></v-text-field>
+                  </v-col>
+
+                  <v-col
+                    cols="12"
+                    sm="6"
+                    md="3"
+                  >
+                    <v-text-field
+                      v-model="newSignedCert.locality"
+                      label="Locality"
+                    ></v-text-field>
+                  </v-col>
+
+                  <v-col
+                    cols="12"
+                    sm="6"
+                    md="3"
+                  >
+                    <v-text-field
+                      v-model="newSignedCert.countryName"
+                      label="Country name"
+                    ></v-text-field>
+                  </v-col>
+
+                  <v-col
+                    cols="12"
+                    sm="6"
+                    md="3"
+                  >
+                    <v-text-field
+                      v-model="newSignedCert.stateOrProvinceName"
+                      label="State or Province"
+                    ></v-text-field>
+                  </v-col>
+
+
+                  <v-col
+                    cols="12"
+                    sm="6"
+                    md="3"
+                  >
+                    <v-text-field
+                      v-model="newSignedCert.dnsname"
+                      label="DNS name"
+                    ></v-text-field>
+                  </v-col>
+
+
+                  <v-col
+                    cols="12"
+                    sm="6"
+                    md="3"
+                  >
+                    <v-text-field
+                      v-model="newSignedCert.ipaddres"
+                      label="IP address"
+                    ></v-text-field>
+                  </v-col>
+
+                  <v-btn
+                    color="primary"
+                    @click="postNewSigned"
+                  >
+                    Finish
+                  </v-btn>
+
+                  <v-btn
+                    text
+                    @click="closeSigned"
+                  >
+                    Cancel
+                  </v-btn>
+                </v-stepper-content>
+
+                <v-stepper-content
+                  step="4"
+                  :key="`4-content`"
+                >
+                  <v-card
+                    class="mb-12"
+                    color="grey lighten-1"
+                    height="200px"
+                  ></v-card>
+
+                  <v-btn
+                    color="primary"
+                    @click="e1 = 5"
+                  >
+                    Continue
+                  </v-btn>
+
+                  <v-btn text>
+                    Cancel
+                  </v-btn>
+                </v-stepper-content>
+
+                <v-stepper-content
+                  step="5"
+                  :key="`5-content`"
+                >
+                  <v-card
+                    class="mb-12"
+                    color="grey lighten-1"
+                    height="200px"
+                  ></v-card>
+
+                  <v-btn
+                    color="primary"
+                    @click="e1 = 1"
+                  >
+                    Continue
+                  </v-btn>
+
+                  <v-btn text>
+                    Cancel
+                  </v-btn>
+                </v-stepper-content>
+              </v-stepper-items>
+            </v-stepper>
+
+
+          </v-card>
+        </v-dialog>
+
+
+
+        <v-snackbar
+          v-model="snackbar"
+          :timeout="timeout"
+        >
+          You need to select one signing certificate
+          <template v-slot:action="{ attrs }">
+            <v-btn
+              color="red"
+              text
+              v-bind="attrs"
+              @click="snackbar = false"
+            >
+              Close
+            </v-btn>
+          </template>
+        </v-snackbar>
+
+
       </v-flex>
     </v-layout>
   </v-container>
 </template>
+
+<style>
+.v-stepper__step:not(.v-stepper__step--active):not(.v-stepper__step--complete):not(.v-stepper__step--error) .v-stepper__step__step {
+  color: transparent;
+}
+.v-stepper__step--active:not(.v-stepper__step--complete) .v-stepper__step__step {
+  color: transparent;
+}
+</style>
 
 <script>
 export default {
   data() {
     return {
       e1: 1,
+      snackbar: false,
+      timeout: 4000,
       dialog: false,
+      dialogSigned: false,
+      steps: [1,2,3],
+      testItem:[ { choiceName: 'Create and deploy directly to keystore(s)', choiceValue: [1, 2, 4] },
+        { choiceName: 'Create a intermediate certificate', choiceValue: [1, 2, 3] },
+        { choiceName: 'Create and export directly', choiceValue: [1, 2, 3, 4, 5] },
+      ],
       newCa:{
         keyAlgorithm: '',
         signatureAlgorithm: '',
@@ -336,11 +731,31 @@ export default {
         commonName: '',
         certAlias: '',
       },
+      newSignedCert:{
+        keyAlgorithm: '',
+        signatureAlgorithm: '',
+        keySize: '',
+        dateFrom: (new Date(Date.now() - (new Date()).getTimezoneOffset() * 60000)).toISOString().substr(0, 10),
+        dateTo: (new Date(Date.now() - (new Date()).getTimezoneOffset() * 60000)).toISOString().substr(0, 10),
+        commonName: '',
+        organizationalUnit: '',
+        organization: '',
+        locality: '',
+        stateOrProvinceName: '',
+        countryName: '',
+        dnsname: '',
+        ipaddres: '',
+        certAlias: '',
+        intermediate:'',
+        signingCertId:'',
+      },
       keyAlgorithmItems: ['RSA'],
       signatureAlgorithmItems: ['SHA256withRSA'],
       keySizeItems: ['2048','3072','4096'],
       fromMenu: false,
       toMenu:false,
+      fromMenuSigned: false,
+      toMenuSigned:false,
       certificatelist: [],
       selected: [],
       search: '',
@@ -353,6 +768,7 @@ export default {
         { text: 'Certificate alias', value: 'alias' },
         { text: 'Managed', value: 'managed' },
         { text: 'Status', value: 'status' },
+        { text: 'Type', value: 'level' },
         { text: '', value: 'data-table-expand' },
       ],
     };
@@ -375,6 +791,15 @@ export default {
           this.certificatelist = error;
         });
     },
+    sizeOfSelected(){
+      if( this.selected.length !== 1 ){
+        this.snackbar = true
+      }else{
+        this.dialogSigned=true
+      }
+
+
+    },
     postNewCa() {
       this.$axios
         .post('http://localhost:8091/api/cavault/add-root', this.newCa)
@@ -390,6 +815,24 @@ export default {
       console.log('CA data:', this.newCa)
       this.close()
     },
+    postNewSigned() {
+      this.newSignedCert.intermediate = true
+      this.newSignedCert.signingCertId = this.selected[0].id
+      this.e1 = 1
+      this.$axios
+        .post('http://localhost:8091/api/cavault/add-signed', this.newSignedCert)
+        .then((response) => {
+          console.log('Post response: ', response.data);
+          this.getCertificateData();
+        })
+        .catch((error) => {
+          this.alert = true;
+          console.log('Error while trying to create new signed cert:', error);
+        });
+
+      console.log('New signed cert data:', this.newSignedCert)
+      this.close()
+    },
     getStatusColor(status) {
       if (status === 'VALID') return 'green';
       if (status === 'EXPIRING SOON') return 'orange';
@@ -400,8 +843,17 @@ export default {
       if (status === 'YES') return 'green';
       return 'red';
     },
+    getLevelColour(level) {
+      if (level==='ROOT') return 'purple';
+      return 'pink';
+    },
     close() {
       this.dialog = false;
+      this.e1=1
+    },
+    closeSigned() {
+      this.dialogSigned = false;
+      this.e1=1
     },
   },
 };
