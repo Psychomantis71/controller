@@ -206,11 +206,10 @@ export default {
           align: 'start',
           value: 'id',
         },
-        { text: 'Keystore path', value: 'location' },
+        { text: 'Path name', value: 'pahtname' },
+        { text: 'Path', value: 'location' },
         { text: 'Instance name', value: 'instanceName' },
         { text: 'Hostname', value: 'hostname' },
-        { text: 'Status', value: 'status' },
-        { text: 'Keystore description', value: 'description' },
       ],
     };
   },
