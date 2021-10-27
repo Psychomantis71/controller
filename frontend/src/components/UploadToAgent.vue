@@ -11,7 +11,7 @@
           dark
           color="teal lighten-1"
           class="ma-2"
-          @click="getKeystoreData"
+          @click="getPayloadLocationData"
         >
           Force refresh
         </v-btn>
@@ -29,12 +29,12 @@
               v-on="on"
               @click="getInstanceData"
             >
-              Add keystore
+              Add payload location
             </v-btn>
           </template>
           <v-card>
             <v-card-title>
-              <span class="text-h5">Add keystore</span>
+              <span class="text-h5">Add payload location</span>
             </v-card-title>
 
             <v-card-text>
@@ -46,9 +46,9 @@
                     md="4"
                   >
                     <v-text-field
-                      v-model="editedItem.keystorepath"
-                      label="Keystore path"
-                      name="keystorePath"
+                      v-model="newPayloadLocation.pathName"
+                      label="Payload path name"
+                      name="payloadPathName"
                     />
                   </v-col>
                   <v-col
@@ -57,27 +57,9 @@
                     md="4"
                   >
                     <v-text-field
-                      v-model="editedItem.password"
-                      :append-icon="show1 ? 'mdi-eye' : 'mdi-eye-off'"
-                      :rules="[rules.required]"
-                      :type="show1 ? 'text' : 'password'"
-                      name="passwordInput"
-                      label="Password"
-                      hint="If selecting multiple instances assure that the password is the same"
-                      value=""
-                      class="input-group--focused"
-                      @click:append="show1 = !show1"
-                    />
-                  </v-col>
-                  <v-col
-                    cols="12"
-                    sm="6"
-                    md="4"
-                  >
-                    <v-text-field
-                      v-model="editedItem.description"
-                      label="Description"
-                      name="descriptionFiled"
+                      v-model="newPayloadLocation.path"
+                      label="Payload path"
+                      name="payloadPath"
                     />
                   </v-col>
                   <v-col
@@ -86,7 +68,7 @@
                     md="12"
                   >
                     <v-autocomplete
-                      v-model="editedItem.instance"
+                      v-model="newPayloadLocation.instanceId"
                       :items="agentInstances"
                       outlined
                       dense
@@ -137,6 +119,14 @@
         >
           Delete
         </v-btn>
+
+        <v-btn
+          dark
+          color="teal lighten-1"
+          class="ma-2"
+        >
+          Submit to payload location
+        </v-btn>
         <v-card>
           <v-card-title>
             <v-text-field
@@ -150,22 +140,18 @@
           <v-data-table
             v-model="selected"
             :headers="headers"
-            :items="keystores"
+            :items="payloadLocations"
             :search="search"
             item-key="id"
             show-select
             class="elevation-1"
           >
-            <template v-slot:item.status="{ item }">
-              <v-chip
-                :color="getStatusColor(item.status)"
-                dark
-              >
-                {{ item.status }}
-              </v-chip>
-            </template>
           </v-data-table>
         </v-card>
+        <v-file-input
+          v-model="fileToUpload"
+          label="File input"
+        ></v-file-input>
       </v-flex>
     </v-layout>
   </v-container>
@@ -181,7 +167,12 @@ export default {
       editedIndex: -1,
       show1: false,
       agentInstances: [],
-      keystoresToAdd: [],
+      fileToUpload:null,
+      newPayloadLocation: {
+        instanceId:'',
+        pathName:'',
+        path:'',
+      },
       rules: {
         required: (value) => !!value || 'Required.',
       },
@@ -198,7 +189,7 @@ export default {
         description: '',
       },
       selected: [],
-      keystores: [],
+      payloadLocations: [],
       search: '',
       headers: [
         {
@@ -206,8 +197,8 @@ export default {
           align: 'start',
           value: 'id',
         },
-        { text: 'Path name', value: 'pahtname' },
-        { text: 'Path', value: 'location' },
+        { text: 'Path name', value: 'pathName' },
+        { text: 'Path', value: 'path' },
         { text: 'Instance name', value: 'instanceName' },
         { text: 'Hostname', value: 'hostname' },
       ],
@@ -216,27 +207,27 @@ export default {
   created() {
   },
   mounted() {
-    this.getKeystoreData();
+    this.getPayloadLocationData();
   },
   methods: {
-    getKeystoreData() {
+    getPayloadLocationData() {
       this.$axios
-        .get('http://localhost:8091/api/keystore/all-gui')
+        .get('http://localhost:8091/api/files/all-gui')
         .then((response) => {
           console.log('Get response: ', response.data);
-          this.keystores = response.data;
+          this.payloadLocations = response.data;
         })
         .catch((error) => {
           this.alert = true;
-          this.agentInstances = error;
+          this.payloadLocations = error;
         });
     },
-    addKeystore() {
+    addPayloadLocationData() {
       this.$axios
-        .post('http://localhost:8091/api/keystore/add', this.keystoresToAdd)
+        .post('http://localhost:8091/api/files/add-location', this.newPayloadLocation)
         .then((response) => {
           console.log('Post response: ', response.data);
-          this.getKeystoreData();
+          this.getPayloadLocationData();
         })
         .catch((error) => {
           this.alert = true;
@@ -296,20 +287,11 @@ export default {
       });
     },
     save() {
-      console.log(this.editedItem);
-      this.keystoresToAdd = [];
-      this.editedItem.instance.forEach((entry) => {
-        const tempelement = {
-          instanceId: entry,
-          location: this.editedItem.keystorepath,
-          description: this.editedItem.description,
-          password: this.editedItem.password,
-        };
-        this.keystoresToAdd.push(tempelement);
-        console.log(entry);
-      });
-      this.addKeystore();
-      console.log(this.keystoresToAdd);
+
+      this.newPayloadLocation.instanceId=this.newPayloadLocation.instanceId[0]
+      console.log(this.newPayloadLocation)
+      this.addPayloadLocationData();
+      this.newPayloadLocation.instanceId=null
       this.close();
     },
   },
