@@ -9,9 +9,12 @@ import eu.outerheaven.certmanager.controller.util.PreparedRequest
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.core.io.Resource
+import org.springframework.http.HttpHeaders
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
@@ -59,6 +62,25 @@ class CertificateController {
     ResponseEntity testGen(){
         caVaultService.main()
         return ResponseEntity.ok("OK")
+    }
+
+    @GetMapping("/{certificateId}/export-pem")
+    ResponseEntity<Resource> exportAsFile(@PathVariable Long certificateId){
+
+        Resource resource = service.exportAsPem(certificateId)
+
+        try{
+            return ResponseEntity.ok().header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + resource.getFilename() + "\"").body(resource)
+        }catch(Exception exception){
+            LOG.error("Error while exporting file: " + exception)
+        }finally{
+
+        }
+
+
+
+
+
     }
 
 }

@@ -9,6 +9,7 @@ import javax.persistence.GeneratedValue
 import javax.persistence.GenerationType
 import javax.persistence.Id
 import java.security.Key
+import java.security.PrivateKey
 import java.security.cert.X509Certificate
 
 @Entity
@@ -23,7 +24,7 @@ class Certificate {
     private String alias
 
     @Column(length = 8192)
-    private Key key
+    private PrivateKey privateKey
 
     @Column(length = 4000)
     private X509Certificate x509Certificate
@@ -80,11 +81,11 @@ class Certificate {
         this.keystoreId = keystoreId
     }
 
-    Key getKey() {
-        return key
+    PrivateKey getPrivateKey() {
+        return privateKey
     }
 
-    void setKey(Key key) {
-        this.key = key
+    void setPrivateKey(PrivateKey privateKey) {
+        this.privateKey = privateKey
     }
 }

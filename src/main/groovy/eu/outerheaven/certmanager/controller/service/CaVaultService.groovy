@@ -307,11 +307,14 @@ class CaVaultService {
 
     }
 
-    static void writeCertToFileBase64Encoded(Certificate certificate, String fileName) throws Exception {
+    void writeCertToFileBase64Encoded(Certificate certificate, String fileName) throws Exception {
         FileOutputStream certificateOut = new FileOutputStream(fileName)
-        certificateOut.write("-----BEGIN CERTIFICATE-----".getBytes())
-        certificateOut.write(Base64.encode(certificate.getEncoded()))
-        certificateOut.write("-----END CERTIFICATE-----".getBytes())
+        String certData = new String(Base64.encode(certificate.getEncoded()))
+        certData = certData.replaceAll("(.{67})", "\$1\n")
+        certificateOut.write("-----BEGIN CERTIFICATE-----\n".getBytes())
+        //certificateOut.write(Base64.encode(certificate.getEncoded()))
+        certificateOut.write(certData.getBytes())
+        certificateOut.write("\n-----END CERTIFICATE-----".getBytes())
         certificateOut.close()
     }
 

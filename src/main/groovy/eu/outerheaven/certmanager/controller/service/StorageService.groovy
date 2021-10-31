@@ -1,11 +1,13 @@
 package eu.outerheaven.certmanager.controller.service
 
 import eu.outerheaven.certmanager.controller.dto.KeystoreDto
+import eu.outerheaven.certmanager.controller.dto.PayloadUploadDto
 import eu.outerheaven.certmanager.controller.entity.Instance
 import eu.outerheaven.certmanager.controller.form.InstanceForm
 import eu.outerheaven.certmanager.controller.form.KeystoreForm
 import eu.outerheaven.certmanager.controller.form.PayloadLocationForm
 import eu.outerheaven.certmanager.controller.form.PayloadLocationFormGUI
+import eu.outerheaven.certmanager.controller.form.PayloadUploadForm
 import eu.outerheaven.certmanager.controller.repository.InstanceRepository
 import eu.outerheaven.certmanager.controller.util.CertificateLoader
 import eu.outerheaven.certmanager.controller.util.PreparedRequest
@@ -13,11 +15,17 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.core.ParameterizedTypeReference
+import org.springframework.core.io.ClassPathResource
 import org.springframework.http.HttpEntity
+import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpMethod
+import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
 import org.springframework.stereotype.Service
+import org.springframework.util.LinkedMultiValueMap
+import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.client.RestTemplate
+import org.springframework.web.multipart.MultipartFile
 
 @Service
 class StorageService {
@@ -103,6 +111,28 @@ class StorageService {
         } catch(Exception e){
             LOG.error("Error while adding payload location " + e )
         }
+    }
+
+    void uploadFile(PayloadUploadForm payloadUploadForm){
+        LOG.info("Data for file is : {} ", payloadUploadForm.getBase64file())
+        List<PayloadLocationFormGUI> payloadLocationFormGUIS = payloadUploadForm.payloadLocationFormGUIS
+        payloadLocationFormGUIS.forEach(r -> {
+            Instance instance = instanceRepository.findById(r.instanceId).get()
+            PreparedRequest preparedRequest = new PreparedRequest()
+            RestTemplate restTemplate = new RestTemplate();
+            PayloadUploadDto payloadUploadDto = new PayloadUploadDto(
+                    name: payloadUploadForm.name,
+                    base64file: payloadUploadForm.base64file,
+                    payloadLocationId: r.agentId
+            )
+            HttpEntity<PayloadUploadDto> request = new HttpEntity<>(payloadUploadDto, preparedRequest.getHeader(instance))
+            try{
+                ResponseEntity<String> result = restTemplate.postForEntity(instance.getAccessUrl() + api_url + "/upload-file", request, String.class)
+                LOG.info("File upload of file {} to instance {} response: ", payloadUploadForm.name, instance.name )
+            }catch(Exception exception){
+                LOG.error("File upload failed with exception: ", exception)
+            }
+        })
     }
 
 

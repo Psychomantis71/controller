@@ -152,6 +152,14 @@
           v-model="fileToUpload"
           label="File input"
         ></v-file-input>
+        <v-btn
+          dark
+          color="teal lighten-1"
+          class="ma-2"
+          @click="uploadFilev2"
+        >
+          Upload file
+        </v-btn>
       </v-flex>
     </v-layout>
   </v-container>
@@ -168,6 +176,11 @@ export default {
       show1: false,
       agentInstances: [],
       fileToUpload:null,
+      uploadToAgentData:{
+        name:'',
+        base64file:'',
+        payloadLocationFormGUIS:[]
+      },
       newPayloadLocation: {
         instanceId:'',
         pathName:'',
@@ -286,8 +299,68 @@ export default {
         this.editedIndex = -1;
       });
     },
-    save() {
+    uploadFile(){
 
+      this.getBase64(this.fileToUpload).then(
+        data => {
+          this.$axios
+            .post('http://localhost:8091/api/files/upload-file', data, this.selected)
+            .then((response) => {
+              console.log('Post response: ', response.data);
+            })
+            .catch((error) => {
+              this.alert = true;
+              console.log(error);
+            });
+        }
+      );
+
+      this.$axios
+        .post('http://localhost:8091/api/files/upload-file', this.fileToUpload, this.selected)
+        .then((response) => {
+          console.log('Post response: ', response.data);
+        })
+        .catch((error) => {
+          this.alert = true;
+          console.log(error);
+        });
+    },
+    uploadFilev2(){
+      this.getBase64(this.fileToUpload).then(
+        data => {
+          this.uploadToAgentData.name=this.fileToUpload.name
+          this.uploadToAgentData.base64file=data
+          this.uploadToAgentData.payloadLocationFormGUIS=this.selected
+          console.log(this.uploadToAgentData)
+          this.$axios
+            .post('http://localhost:8091/api/files/upload-file', this.uploadToAgentData)
+            .then((response) => {
+              console.log('Post response: ', response.data);
+            })
+            .catch((error) => {
+              this.alert = true;
+              console.log(error);
+            });
+        }
+      );
+
+
+    },
+    getBase64(file){
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => {
+          let encoded = reader.result.toString().replace(/^data:(.*,)?/, '');
+          if ((encoded.length % 4) > 0) {
+            encoded += '='.repeat(4 - (encoded.length % 4));
+          }
+          resolve(encoded);
+        };
+        reader.onerror = error => reject(error);
+      });
+    },
+    save() {
       this.newPayloadLocation.instanceId=this.newPayloadLocation.instanceId[0]
       console.log(this.newPayloadLocation)
       this.addPayloadLocationData();

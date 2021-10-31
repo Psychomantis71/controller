@@ -9,11 +9,15 @@ import eu.outerheaven.certmanager.controller.form.KeystoreForm
 import eu.outerheaven.certmanager.controller.repository.CertificateRepository
 import eu.outerheaven.certmanager.controller.repository.InstanceRepository
 import eu.outerheaven.certmanager.controller.repository.KeystoreRepository
+import eu.outerheaven.certmanager.controller.util.CertificateLoader
 import eu.outerheaven.certmanager.controller.util.PreparedRequest
 import eu.outerheaven.certmanager.controller.util.deserializers.X509CertificateDeserializer
+import org.apache.tomcat.util.http.fileupload.FileUtils
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.core.io.Resource
+import org.springframework.core.io.UrlResource
 import org.springframework.http.HttpEntity
 import org.springframework.http.HttpMethod
 import org.springframework.http.ResponseEntity
@@ -21,6 +25,9 @@ import org.springframework.stereotype.Service
 import org.springframework.web.client.RestTemplate
 
 import javax.servlet.http.HttpServletRequest
+import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.Paths
 import java.security.cert.X509Certificate
 import java.time.Instant
 import java.time.LocalDateTime
@@ -121,5 +128,40 @@ class CertificateService {
         return status
     }
 
+    Resource exportAsPem(Long certificateId){
+        CertificateLoader certificateLoader = new CertificateLoader()
+        String folderName = certificateLoader.generateRandomName()
+        Path path = Paths.get(folderName)
+        while (Files.exists(path)){
+            folderName = certificateLoader.generateRandomName()
+            path=Paths.get(folderName)
+        }
+        try{
+            new File(path.toString()).mkdirs()
+            Certificate certificate = repository.findById(certificateId).get()
+            String filename =""
+            if(certificate.getAlias() == null){
+                filename ="certificate.cer"
+            }else {
+                filename =certificate.getAlias() + ".cer"
+            }
+            certificateLoader.writeCertToFileBase64Encoded(certificate.getX509Certificate(),folderName + "/" + filename)
+            if(certificate.privateKey != null){
+                certificateLoader.writeKeyToFileBase64Encoded(certificate.getPrivateKey(), folderName + "/" + filename)
+            }
+
+            URI uri = folderName + "/" + filename as URI
+            Resource resource = new UrlResource(uri)
+            return resource
+        }catch(Exception exception){
+            LOG.error("Failed exporting certificate:" + exception)
+        }
+    }
+
+    void deleteTempFile(Resource resource){
+        Path path = Paths.get(resource.getURI())
+        path.getParent()
+        FileUtils.deleteDirectory(path.getParent().toFile())
+    }
 
 }

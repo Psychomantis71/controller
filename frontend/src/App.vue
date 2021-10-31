@@ -126,7 +126,6 @@ export default {
           { title: 'Instances', path: '/instances', icon: 'desktop_windows' },
           { title: 'Keystores', path: '/keystores', icon: 'vpn_key' },
           { title: 'Certificates', path: '/certificates', icon: 'badge' },
-          { title: 'Upload file to agent', path: '/secured', icon: 'upload' },
           { title: 'Admin settings', path: '/home', icon: 'admin_panel_settings' },
           { title: 'Ca vault', path: '/CaVault', icon: 'admin_panel_settings' },
           { title: 'Test', path: '/Test', icon: 'admin_panel_settings' },

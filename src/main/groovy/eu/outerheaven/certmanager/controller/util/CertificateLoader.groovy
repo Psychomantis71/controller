@@ -4,6 +4,7 @@ import com.ibm.security.cmskeystore.CMSProvider
 import eu.outerheaven.certmanager.controller.entity.Keystore
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.bouncycastle.openssl.PEMParser
+import org.bouncycastle.util.encoders.Base64
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import eu.outerheaven.certmanager.controller.entity.Certificate
@@ -240,7 +241,6 @@ class CertificateLoader {
         encodedCerts.forEach(r->decodedCerts.add(decodeX509(r)))
         return encodedCerts
     }
-
     String encodeKey(Key key){
         try{
             ByteArrayOutputStream binaryOutput = new ByteArrayOutputStream()
@@ -253,7 +253,6 @@ class CertificateLoader {
             LOG.error("Could not encode Key to base64 with error: " + exception)
         }
     }
-
     Key decodeKey(String input){
         try{
             byte [] data = Base64.getUrlDecoder().decode(input)
@@ -265,5 +264,41 @@ class CertificateLoader {
             LOG.error("Could not decode base64 to key with error: " + exception)
         }
     }
+
+    void writeCertToFileBase64Encoded(X509Certificate certificate, String fileName) throws Exception {
+        FileOutputStream certificateOut = new FileOutputStream(fileName)
+        String certData = new String(Base64.encode(certificate.getEncoded()))
+        certData = certData.replaceAll("(.{67})", "\$1\n")
+        certificateOut.write("-----BEGIN CERTIFICATE-----\n".getBytes())
+        certificateOut.write(certData.getBytes())
+        certificateOut.write("\n-----END CERTIFICATE-----".getBytes())
+        certificateOut.close()
+    }
+
+    void writeKeyToFileBase64Encoded(PrivateKey privateKey, String fileName) throws Exception {
+        FileOutputStream certificateOut = new FileOutputStream(fileName)
+        String keyData = new String(Base64.encode(privateKey.getEncoded()))
+        keyData = keyData.replaceAll("(.{67})", "\$1\n")
+        certificateOut.write("\n-----BEGIN PRIVATE KEY-----\n".getBytes())
+        //certificateOut.write(Base64.encode(certificate.getEncoded()))
+        certificateOut.write(keyData.getBytes())
+        certificateOut.write("\n-----END PRIVATE KEY-----".getBytes())
+        certificateOut.close()
+    }
+
+    String generateRandomName(){
+        int leftLimit = 97; // letter 'a'
+        int rightLimit = 122; // letter 'z'
+        int targetStringLength = 10
+        Random random = new Random()
+
+        String generatedString = random.ints(leftLimit, rightLimit + 1)
+                .limit(targetStringLength)
+                .collect(StringBuilder::new, StringBuilder::appendCodePoint, StringBuilder::append)
+                .toString()
+
+        return generatedString
+    }
+
 
 }
