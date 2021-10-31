@@ -26,6 +26,14 @@
           dark
           color="teal lighten-1"
           class="ma-2"
+          @click="exportCertificatePEM"
+        >
+          Export
+        </v-btn>
+        <v-btn
+          dark
+          color="teal lighten-1"
+          class="ma-2"
         >
           Replace
         </v-btn>
@@ -143,6 +151,32 @@ export default {
         .catch((error) => {
           this.alert = true;
           this.certificatelist = error;
+        });
+    },
+    exportCertificatePEM() {
+      this.$axios
+        .get(`http://localhost:8091/api/certificate/${this.selected[0].id}/export-pem`)
+        .then((response) => {
+          console.log('Get response: ', response);
+          console.log('Get response: ', response.data);
+          console.log('Get response: ', response.headers);
+          console.log('Usrani header: ', response.headers['content-disposition'].split('filename=')[1]);
+          let filetodownload = response.headers['content-disposition'].split('filename=')[1].split(';')[0];
+          filetodownload = filetodownload.substring(1, filetodownload.length-1)
+          console.log(filetodownload);
+          var fileURL = window.URL.createObjectURL(new Blob([response.data]));
+          var fileLink = document.createElement('a');
+
+          fileLink.href = fileURL;
+          fileLink.setAttribute('download', filetodownload);
+          document.body.appendChild(fileLink);
+
+          fileLink.click();
+
+        })
+        .catch((error) => {
+          this.alert = true;
+          console.log(error)
         });
     },
     getStatusColor(status) {

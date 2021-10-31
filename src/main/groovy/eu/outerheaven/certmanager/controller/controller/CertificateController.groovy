@@ -67,19 +67,17 @@ class CertificateController {
     @GetMapping("/{certificateId}/export-pem")
     ResponseEntity<Resource> exportAsFile(@PathVariable Long certificateId){
 
+        LOG.info("Export pem controller called")
         Resource resource = service.exportAsPem(certificateId)
 
         try{
+            LOG.info("Filename on response is:" + resource.getFilename())
             return ResponseEntity.ok().header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + resource.getFilename() + "\"").body(resource)
         }catch(Exception exception){
             LOG.error("Error while exporting file: " + exception)
         }finally{
-
+            //service.deleteTempFile(resource)
         }
-
-
-
-
 
     }
 

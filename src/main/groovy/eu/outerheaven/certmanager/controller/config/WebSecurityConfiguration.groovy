@@ -25,6 +25,8 @@ public class WebSecurityConfiguration extends WebSecurityConfigurerAdapter {
         config.setAllowedOrigins(Arrays.asList("http://localhost:8080"));
         config.addAllowedHeader("*");
         config.addAllowedMethod("*");
+        //TODO is this smart to leave like this? I have no fucking idea
+        config.addExposedHeader('Content-Disposition')
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
         return source;

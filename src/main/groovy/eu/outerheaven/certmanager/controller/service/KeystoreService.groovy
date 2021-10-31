@@ -100,7 +100,7 @@ class KeystoreService {
             Certificate certificate = new Certificate(
                     agent_id: r.id,
                     alias: r.alias,
-                    key: certificateLoader.decodeKey(r.key),
+                    privateKey: certificateLoader.decodeKey(r.key),
                     x509Certificate: certificateLoader.decodeX509(r.encodedX509),
                     managed: r.managed,
                     keystoreId: keystoreId

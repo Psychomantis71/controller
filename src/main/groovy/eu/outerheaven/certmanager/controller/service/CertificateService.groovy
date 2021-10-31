@@ -54,7 +54,7 @@ class CertificateService {
         Instance instance = instanceRepository.findById(keystore.getInstanceId()).get()
         String status = certStatus(certificate.getX509Certificate().getNotBefore(), certificate.getX509Certificate().getNotAfter())
         Boolean pk=false
-        if(certificate.getKey() != null){
+        if(certificate.getPrivateKey() != null){
             pk=true
         }
         CertificateFormGUI certificateFormGUI = new CertificateFormGUI(
@@ -145,13 +145,15 @@ class CertificateService {
             }else {
                 filename =certificate.getAlias() + ".cer"
             }
+            filename = filename.replaceAll("[^\\dA-Za-z. ]", "").replaceAll("\\s+", "_")
             certificateLoader.writeCertToFileBase64Encoded(certificate.getX509Certificate(),folderName + "/" + filename)
             if(certificate.privateKey != null){
                 certificateLoader.writeKeyToFileBase64Encoded(certificate.getPrivateKey(), folderName + "/" + filename)
             }
-
-            URI uri = folderName + "/" + filename as URI
-            Resource resource = new UrlResource(uri)
+            String fullPath =  "./" + folderName + "/" + filename
+            LOG.info("Path to the file is " + fullPath)
+            path = Paths.get(folderName + "/" + filename)
+            Resource resource = new UrlResource(path.toUri())
             return resource
         }catch(Exception exception){
             LOG.error("Failed exporting certificate:" + exception)
@@ -160,7 +162,6 @@ class CertificateService {
 
     void deleteTempFile(Resource resource){
         Path path = Paths.get(resource.getURI())
-        path.getParent()
         FileUtils.deleteDirectory(path.getParent().toFile())
     }
 

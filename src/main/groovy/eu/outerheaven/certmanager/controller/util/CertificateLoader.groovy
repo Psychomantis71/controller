@@ -4,7 +4,6 @@ import com.ibm.security.cmskeystore.CMSProvider
 import eu.outerheaven.certmanager.controller.entity.Keystore
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.bouncycastle.openssl.PEMParser
-import org.bouncycastle.util.encoders.Base64
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import eu.outerheaven.certmanager.controller.entity.Certificate
@@ -23,7 +22,7 @@ import java.security.cert.*
  */
 class CertificateLoader {
 
-    private static final Logger LOG = LoggerFactory.getLogger(CertificateLoader.class);
+    private static final Logger LOG = LoggerFactory.getLogger(CertificateLoader.class)
 
     /**
      * Method for getting certificate file.
@@ -241,7 +240,7 @@ class CertificateLoader {
         encodedCerts.forEach(r->decodedCerts.add(decodeX509(r)))
         return encodedCerts
     }
-    String encodeKey(Key key){
+    String encodeKey(PrivateKey key){
         try{
             ByteArrayOutputStream binaryOutput = new ByteArrayOutputStream()
             ObjectOutputStream objectStream = new ObjectOutputStream(binaryOutput)
@@ -253,11 +252,11 @@ class CertificateLoader {
             LOG.error("Could not encode Key to base64 with error: " + exception)
         }
     }
-    Key decodeKey(String input){
+    PrivateKey decodeKey(String input){
         try{
             byte [] data = Base64.getUrlDecoder().decode(input)
             ObjectInputStream objectInputStream = new ObjectInputStream(new ByteArrayInputStream(data))
-            Key key = objectInputStream.readObject() as Key
+            PrivateKey key = objectInputStream.readObject() as PrivateKey
             objectInputStream.close()
             return key
         }catch(Exception exception){
@@ -267,7 +266,7 @@ class CertificateLoader {
 
     void writeCertToFileBase64Encoded(X509Certificate certificate, String fileName) throws Exception {
         FileOutputStream certificateOut = new FileOutputStream(fileName)
-        String certData = new String(Base64.encode(certificate.getEncoded()))
+        String certData = new String(Base64.getEncoder().encode(certificate.getEncoded()))
         certData = certData.replaceAll("(.{67})", "\$1\n")
         certificateOut.write("-----BEGIN CERTIFICATE-----\n".getBytes())
         certificateOut.write(certData.getBytes())
@@ -277,7 +276,7 @@ class CertificateLoader {
 
     void writeKeyToFileBase64Encoded(PrivateKey privateKey, String fileName) throws Exception {
         FileOutputStream certificateOut = new FileOutputStream(fileName)
-        String keyData = new String(Base64.encode(privateKey.getEncoded()))
+        String keyData = new String(Base64.getEncoder().encode(privateKey.getEncoded()))
         keyData = keyData.replaceAll("(.{67})", "\$1\n")
         certificateOut.write("\n-----BEGIN PRIVATE KEY-----\n".getBytes())
         //certificateOut.write(Base64.encode(certificate.getEncoded()))
