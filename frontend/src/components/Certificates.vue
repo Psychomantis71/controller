@@ -145,7 +145,6 @@ export default {
       this.$axios
         .get('http://localhost:8091/api/certificate/all-gui')
         .then((response) => {
-          console.log('Get response: ', response.data);
           this.certificatelist = response.data;
         })
         .catch((error) => {
@@ -157,10 +156,6 @@ export default {
       this.$axios
         .get(`http://localhost:8091/api/certificate/${this.selected[0].id}/export-pem`)
         .then((response) => {
-          console.log('Get response: ', response);
-          console.log('Get response: ', response.data);
-          console.log('Get response: ', response.headers);
-          console.log('Usrani header: ', response.headers['content-disposition'].split('filename=')[1]);
           let filetodownload = response.headers['content-disposition'].split('filename=')[1].split(';')[0];
           filetodownload = filetodownload.substring(1, filetodownload.length-1)
           console.log(filetodownload);

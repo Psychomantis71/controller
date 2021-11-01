@@ -219,6 +219,7 @@ class CertificateLoader {
             LOG.error("Could not encode X509Certificate to base64 with error: " + exception)
         }
     }
+
     X509Certificate decodeX509(String input){
         try{
             byte [] data = Base64.getUrlDecoder().decode(input)
@@ -230,11 +231,13 @@ class CertificateLoader {
             LOG.error("Could not decode  base64 to X509Certificate with error: " + exception)
         }
     }
+
     List<String> encodeX509List(List<X509Certificate> decodedCerts){
         List<String> encodedCerts = new ArrayList<>()
         decodedCerts.forEach(r->encodedCerts.add(encodeX509(r)))
         return encodedCerts
     }
+
     List<X509Certificate> decodeX509List(List<String> encodedCerts){
         List<X509Certificate> decodedCerts = new ArrayList<>()
         encodedCerts.forEach(r->decodedCerts.add(decodeX509(r)))
@@ -252,6 +255,7 @@ class CertificateLoader {
             LOG.error("Could not encode Key to base64 with error: " + exception)
         }
     }
+
     PrivateKey decodeKey(String input){
         try{
             byte [] data = Base64.getUrlDecoder().decode(input)
@@ -299,5 +303,22 @@ class CertificateLoader {
         return generatedString
     }
 
+    Boolean doesKeyPairMatch(){
+
+        KeyPairGenerator keyGen = KeyPairGenerator.getInstance("RSA");
+        keyGen.initialize(2048);
+
+        KeyPair keyPair = keyGen.generateKeyPair();
+        RSAPrivateCrtKey privateKey = (RSAPrivateCrtKey) keyPair.getPrivate();
+        RSAPublicKey publicKey = (RSAPublicKey) keyPair.getPublic();
+
+        // comment this out to verify the behavior when the keys are different
+        //keyPair = keyGen.generateKeyPair();
+        //publicKey = (RSAPublicKey) keyPair.getPublic();
+
+        boolean keyPairMatches = privateKey.getModulus().equals(publicKey.getModulus()) &&
+                privateKey.getPublicExponent().equals(publicKey.getPublicExponent());
+
+    }
 
 }
