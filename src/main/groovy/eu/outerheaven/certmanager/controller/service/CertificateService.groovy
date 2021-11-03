@@ -1,11 +1,13 @@
 package eu.outerheaven.certmanager.controller.service
 
 import eu.outerheaven.certmanager.controller.dto.CertificateDto
+import eu.outerheaven.certmanager.controller.dto.CertificateImportDto
 import eu.outerheaven.certmanager.controller.entity.Certificate
 import eu.outerheaven.certmanager.controller.entity.Instance
 import eu.outerheaven.certmanager.controller.entity.Keystore
 import eu.outerheaven.certmanager.controller.form.CertificateFormGUI
 import eu.outerheaven.certmanager.controller.form.KeystoreForm
+import eu.outerheaven.certmanager.controller.form.KeystoreFormGUI
 import eu.outerheaven.certmanager.controller.repository.CertificateRepository
 import eu.outerheaven.certmanager.controller.repository.InstanceRepository
 import eu.outerheaven.certmanager.controller.repository.KeystoreRepository
@@ -163,6 +165,19 @@ class CertificateService {
     void deleteTempFile(Resource resource){
         Path path = Paths.get(resource.getURI())
         FileUtils.deleteDirectory(path.getParent().toFile())
+    }
+
+    void importCertificate(CertificateImportDto certificateImportDto){
+        if(certificateImportDto.getImportFormat() == "PEM"){
+            CertificateLoader certificateLoader = new CertificateLoader()
+            certificateLoader.decodeImportPem(certificateImportDto.getBase64File(), certificateImportDto.getFilename())
+        }else {
+            LOG.info("Well fuck seems like the developer hasnt implemented this yet")
+        }
+    }
+
+    void propCertToAgents(List<Certificate> certificates, List<KeystoreFormGUI> keystoreFormGUIS){
+
     }
 
 }

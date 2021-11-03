@@ -2,6 +2,8 @@ package eu.outerheaven.certmanager.controller.util
 
 import com.ibm.security.cmskeystore.CMSProvider
 import eu.outerheaven.certmanager.controller.entity.Keystore
+import javafx.scene.chart.ScatterChart
+import org.apache.tomcat.util.http.fileupload.FileUtils
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.bouncycastle.openssl.PEMParser
 import org.slf4j.Logger
@@ -12,10 +14,15 @@ import javax.net.ssl.SSLSession
 import javax.net.ssl.SSLSocket
 import javax.net.ssl.SSLSocketFactory
 import javax.security.cert.CertificateEncodingException
+import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.security.*
 import java.security.cert.*
+import java.security.spec.PKCS8EncodedKeySpec
+import java.util.concurrent.ThreadLocalRandom
+import java.util.regex.Matcher
+import java.util.regex.Pattern
 
 /**
  * Class that contains method to load certificates in {@link java.security.cert.X509Certificate}.
@@ -143,6 +150,7 @@ class CertificateLoader {
                 }
 
                 keystore.load(new FileInputStream(uri), password.toCharArray())
+                keystore.setCertificateEntry()
                 LOG.debug("Reading aliases from keystore")
                 Enumeration<String> aliases = keystore.aliases()
                 while (aliases.hasMoreElements()) {
@@ -303,22 +311,112 @@ class CertificateLoader {
         return generatedString
     }
 
-    Boolean doesKeyPairMatch(){
+    Boolean doesKeyPairMatch(PrivateKey privateKey, PublicKey publicKey){
+        byte[] challenge = new byte[10000];
+        ThreadLocalRandom.current().nextBytes(challenge)
+        Signature sig = Signature.getInstance("SHA256withRSA")
+        sig.initSign(privateKey)
+        sig.update(challenge)
+        byte[] signature = sig.sign()
+        sig.initVerify(publicKey);
+        sig.update(challenge)
+        boolean keyPairMatches = false
+        try{
+            keyPairMatches = sig.verify(signature)
+        }catch(Exception exception){
+            LOG.debug("Keypair does not match")
+        }
+        return keyPairMatches
+    }
 
-        KeyPairGenerator keyGen = KeyPairGenerator.getInstance("RSA");
-        keyGen.initialize(2048);
+    List<Certificate> matchAndConstruct(List<PrivateKey> privateKeys, List<X509Certificate> x509Certificates, String filename){
+        List<Certificate> certificates = new ArrayList<>()
+        for(int i=0; i<x509Certificates.size();i++){
+            for(int n=0; n<privateKeys.size();n++){
+                if(doesKeyPairMatch(privateKeys.get(n),x509Certificates.get(i).getPublicKey())){
+                    LOG.info("Keypair match found!")
+                    Certificate certificate = new Certificate(
+                            alias: filename + "_" + i.toString(),
+                            privateKey: privateKeys.get(n),
+                            x509Certificate: x509Certificates.get(i)
+                    )
+                    certificates.add(certificate)
+                    privateKeys.remove(n)
+                }
+            }
+            if(certificates.size() < i+1){
+                Certificate certificate = new Certificate(
+                        alias: filename + "_" + i.toString(),
+                        x509Certificate: x509Certificates.get(i)
+                )
+                certificates.add(certificate)
+            }
+        }
+        if(privateKeys.size()>0){
+            LOG.error("WHAT THE FUCK MAN WHY IS THERE A PRIVATE KEY WITHOUT MATCH?!")
+            throw new Exception("You can not import a private key without a matching public certificate");
+        }
+        return certificates
+    }
 
-        KeyPair keyPair = keyGen.generateKeyPair();
-        RSAPrivateCrtKey privateKey = (RSAPrivateCrtKey) keyPair.getPrivate();
-        RSAPublicKey publicKey = (RSAPublicKey) keyPair.getPublic();
+    void decodeImportPem(String input, String filename){
+        try{
+            filename= filename.substring(0, filename.lastIndexOf('.'))
+            byte [] data = Base64.getUrlDecoder().decode(input.getBytes(StandardCharsets.UTF_8))
+            String decodedData = new String(data,StandardCharsets.UTF_8)
 
-        // comment this out to verify the behavior when the keys are different
-        //keyPair = keyGen.generateKeyPair();
-        //publicKey = (RSAPublicKey) keyPair.getPublic();
+            List<X509Certificate> certificates = new ArrayList<>()
+            List<PrivateKey> privateKeys = new ArrayList<>()
 
-        boolean keyPairMatches = privateKey.getModulus().equals(publicKey.getModulus()) &&
-                privateKey.getPublicExponent().equals(publicKey.getPublicExponent());
+            String pattern1 = "-----BEGIN CERTIFICATE-----";
+            String pattern2 = "-----END CERTIFICATE-----";
+            String pattern3 = "-----BEGIN PRIVATE KEY-----";
+            String pattern4 = "-----END PRIVATE KEY-----";
+            Pattern p = Pattern.compile(Pattern.quote(pattern1) + "(?s)(.*?)" + Pattern.quote(pattern2));
+            Matcher m = p.matcher(decodedData);
+            while (m.find()) {
+                String certdatatmp = m.group(1)
+                certdatatmp = certdatatmp.replaceAll("\\s+","")
+                byte [] certdata = Base64.getDecoder().decode(certdatatmp)
+                ByteArrayInputStream inputStream  =  new ByteArrayInputStream(certdata)
+                CertificateFactory certFactory = CertificateFactory.getInstance("X.509");
+                X509Certificate x509Certificate = (X509Certificate)certFactory.generateCertificate(inputStream)
+                certificates.add(x509Certificate)
+                x509Certificate.getPublicKey()
+                LOG.info("Public certificate found in pem import")
+            }
 
+            p = Pattern.compile(Pattern.quote(pattern3) + "(?s)(.*?)" + Pattern.quote(pattern4));
+            m = p.matcher(decodedData);
+            while (m.find()) {
+                String keydatatmp = m.group(1)
+                keydatatmp = keydatatmp.replaceAll("\\s+","")
+
+                byte [] pkcs8EncodedBytes = Base64.getDecoder().decode(keydatatmp)
+                PKCS8EncodedKeySpec keySpec = new PKCS8EncodedKeySpec(pkcs8EncodedBytes);
+                KeyFactory kf = KeyFactory.getInstance("RSA");
+                PrivateKey privateKey = kf.generatePrivate(keySpec)
+                privateKeys.add(privateKey)
+                LOG.info("Private key found in pem import")
+            }
+            List<Certificate> processedCertificates = new ArrayList<>()
+            if(privateKeys.size()>0){
+                LOG.info("Private key/s have been found in import, trying to find matching public key in import")
+                processedCertificates = matchAndConstruct(privateKeys, certificates, filename)
+            }else{
+                for(int i=0;i<certificates.size();i++){
+                    Certificate certificate = new Certificate(
+                            alias: filename + "_" + i.toString(),
+                            x509Certificate: certificates.get(i)
+                    )
+                    processedCertificates.add(certificate)
+                }
+            }
+
+            LOG.info("Found {} certificates in the import",processedCertificates.size())
+        }catch(Exception exception){
+            LOG.error("Well fuck, something failed with the import: " + exception)
+        }
     }
 
 }

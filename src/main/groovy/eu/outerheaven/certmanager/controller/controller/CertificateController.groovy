@@ -1,6 +1,7 @@
 package eu.outerheaven.certmanager.controller.controller
 
 import eu.outerheaven.certmanager.controller.dto.CertificateDto
+import eu.outerheaven.certmanager.controller.dto.CertificateImportDto
 import eu.outerheaven.certmanager.controller.form.KeystoreForm
 import eu.outerheaven.certmanager.controller.service.CaVaultService
 import eu.outerheaven.certmanager.controller.service.CertificateService
@@ -79,6 +80,13 @@ class CertificateController {
             //service.deleteTempFile(resource)
         }
 
+    }
+
+
+    @PostMapping("/import")
+    ResponseEntity importCert(@RequestBody CertificateImportDto certificateImportDto){
+        service.importCertificate(certificateImportDto)
+        return ResponseEntity.ok("OK")
     }
 
 }

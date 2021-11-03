@@ -51,6 +51,122 @@
         >
           Delete
         </v-btn>
+        <v-dialog
+          v-model="dialogImportCert"
+          max-width="1000px"
+        >
+          <template v-slot:activator="{ on, attrs }">
+            <v-btn
+              dark
+              color="teal lighten-1"
+              class="ma-2"
+              v-bind="attrs"
+              v-on="on"
+              @click="getKeystoreData"
+            >
+              Import certificates
+            </v-btn>
+          </template>
+          <v-card>
+            <v-card-title>
+              <span class="text-h5">Import certificate</span>
+            </v-card-title>
+
+            <v-card-text>
+              <v-container>
+                <v-row>
+                  <v-col
+                    cols="12"
+                    sm="6"
+                    md="6"
+                  >
+                  <v-select
+                    v-model="importItem.importFormat"
+                    :items="importOptions"
+                    label="Select import format"
+                    item-value="choiceValue"
+                    item-text="choiceName"
+                  ></v-select>
+                  </v-col>
+                  <v-col
+                    cols="12"
+                    sm="6"
+                    md="6"
+                  >
+                  <v-text-field
+                    v-model="importItem.password"
+                    v-if="importItem.importFormat === 'PKCS12'"
+                    :append-icon="show1 ? 'mdi-eye' : 'mdi-eye-off'"
+                    :rules="[rules.required]"
+                    :type="show1 ? 'text' : 'password'"
+                    name="passwordInput"
+                    label="Password"
+                    hint="If selecting multiple instances assure that the password is the same"
+                    value=""
+                    class="input-group--focused"
+                    @click:append="show1 = !show1"
+                  />
+                  </v-col>
+                </v-row>
+                <v-row>
+                  <v-file-input
+                    v-model="fileToUpload"
+                    label="File input"
+                  ></v-file-input>
+
+
+                  <v-card>
+                  <v-card-title>
+                  <v-text-field
+                    v-model="searchKeystore"
+                    append-icon="mdi-magnify"
+                    label="Search"
+                    single-line
+                    hide-details
+                  />
+                  </v-card-title>
+                  <v-data-table
+                    v-model="importItem.selectedKeystores"
+                    :headers="headersKeystore"
+                    :items="keystores"
+                    :search="searchKeystore"
+                    item-key="id"
+                    show-select
+                    class="elevation-1"
+                  >
+                    <template v-slot:item.status="{ item }">
+                      <v-chip
+                        :color="getStatusColor(item.status)"
+                        dark
+                      >
+                        {{ item.status }}
+                      </v-chip>
+                    </template>
+                  </v-data-table>
+                  </v-card>
+                </v-row>
+              </v-container>
+            </v-card-text>
+
+            <v-card-actions>
+              <v-spacer />
+              <v-btn
+                color="blue darken-1"
+                text
+                @click="closeImportCert"
+              >
+                Cancel
+              </v-btn>
+              <v-btn
+                color="blue darken-1"
+                text
+                @click="saveImportCert"
+              >
+                Save
+              </v-btn>
+            </v-card-actions>
+          </v-card>
+        </v-dialog>
         <v-card>
           <v-card-title>
             <v-text-field
@@ -117,7 +233,14 @@ export default {
   data() {
     return {
       certificatelist: [],
+      fileToUpload:null,
+      dialogImportCert:false,
+      keystores: [],
+      show1: false,
       selected: [],
+      rules: {
+        required: (value) => !!value || 'Required.',
+      },
       search: '',
       headers: [
         {
@@ -132,6 +255,30 @@ export default {
         { text: 'Managed', value: 'managed' },
         { text: 'Status', value: 'status' },
         { text: '', value: 'data-table-expand' },
+      ],
+      importOptions:[ { choiceName: 'PEM certificate', choiceValue: 'PEM' },
+        { choiceName: 'PKCS12', choiceValue: 'PKCS12' },
+      ],
+      importFormat:[],
+      searchKeystore: '',
+      importItem: {
+        selectedKeystores: null,
+        password: '',
+        importFormat: '',
+        filename:'',
+        base64File:'',
+      },
+      headersKeystore: [
+        {
+          text: 'ID',
+          align: 'start',
+          value: 'id',
+        },
+        { text: 'Keystore path', value: 'location' },
+        { text: 'Instance name', value: 'instanceName' },
+        { text: 'Hostname', value: 'hostname' },
+        { text: 'Status', value: 'status' },
+        { text: 'Keystore description', value: 'description' },
       ],
     };
   },
@@ -183,6 +330,57 @@ export default {
     getManagedColor(status) {
       if (status === 'YES') return 'green';
       return 'red';
+    },
+    getKeystoreData() {
+      this.$axios
+        .get('http://localhost:8091/api/keystore/all-gui')
+        .then((response) => {
+          console.log('Get response: ', response.data);
+          this.keystores = response.data;
+        })
+        .catch((error) => {
+          this.alert = true;
+          this.agentInstances = error;
+        });
+    },
+    getBase64(file){
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => {
+          let encoded = reader.result.toString().replace(/^data:(.*,)?/, '');
+          if ((encoded.length % 4) > 0) {
+            encoded += '='.repeat(4 - (encoded.length % 4));
+          }
+          resolve(encoded);
+        };
+        reader.onerror = error => reject(error);
+      });
+    },
+    uploadFile(){
+      this.getBase64(this.fileToUpload).then(
+        data => {
+          this.importItem.base64File=data
+          this.importItem.name=this.fileToUpload.name
+          console.log(this.importItem)
+          this.$axios
+            .post('http://localhost:8091/api/certificate/import', this.importItem)
+            .then((response) => {
+              console.log('Post response: ', response.data);
+            })
+            .catch((error) => {
+              this.alert = true;
+              console.log(error);
+            });
+        }
+      );
+    },
+    saveImportCert() {
+      this.uploadFile();
+      this.closeImportCert();
+    },
+    closeImportCert() {
+      this.dialogImportCert = false;
     },
   },
 };
