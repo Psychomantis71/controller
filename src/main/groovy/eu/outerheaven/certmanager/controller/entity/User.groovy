@@ -20,6 +20,10 @@ class User {
 
     private String email
 
+    User() {
+
+    }
+
     int getId() {
         return id
     }
@@ -59,4 +63,13 @@ class User {
     void setEmail(String email) {
         this.email = email
     }
+
+    User(int id, String userName, String password, String email, UserRole userRole) {
+        this.id = id
+        this.userName = userName
+        this.password = password
+        this.email = email
+        this.userRole = userRole
+    }
+
 }

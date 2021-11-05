@@ -1,7 +1,8 @@
 package eu.outerheaven.certmanager.controller.config
 
 import eu.outerheaven.certmanager.controller.security.JWTAuthenticationFilter;
-import eu.outerheaven.certmanager.controller.security.JWTLoginFilter;
+import eu.outerheaven.certmanager.controller.security.JWTLoginFilter
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -11,12 +12,17 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource
+
+import javax.sql.DataSource;
 
 
 
 @EnableWebSecurity
 public class WebSecurityConfiguration extends WebSecurityConfigurerAdapter {
+
+    @Autowired
+    private DataSource dataSource
 
     @Bean
     CorsConfigurationSource corsConfigurationSource() {
@@ -52,6 +58,10 @@ public class WebSecurityConfiguration extends WebSecurityConfigurerAdapter {
 
     @Override
     public void configure(AuthenticationManagerBuilder auth) throws Exception {
+
+        auth.jdbcAuthentication().dataSource(dataSource).
+
+
         auth
                 .inMemoryAuthentication()
                 .withUser("admin").password("{noop}password").authorities("USER", "ADMIN")
