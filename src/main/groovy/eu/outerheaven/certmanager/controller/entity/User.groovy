@@ -24,7 +24,7 @@ class User {
 
     }
 
-    int getId() {
+    Long getId() {
         return id
     }
 
@@ -64,7 +64,7 @@ class User {
         this.email = email
     }
 
-    User(int id, String userName, String password, String email, UserRole userRole) {
+    User(Long id, String userName, String password, String email, UserRole userRole) {
         this.id = id
         this.userName = userName
         this.password = password

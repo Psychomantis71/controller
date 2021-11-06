@@ -30,11 +30,11 @@ class PreparedRequest {
     private void getLoginToken(Instance instance){
 
         String url = instance.getAccessUrl() + "/login"
-
+        LOG.info("Using this fucking password + " + instance.getInstanceAccessData().getPassword())
         RestTemplate template = new RestTemplate();
         AuthRequestForm authRequestForm = new AuthRequestForm()
-        authRequestForm.setPassword(instance.getUser().getPassword())
-        authRequestForm.setUsername(instance.getUser().getUserName())
+        authRequestForm.setPassword(instance.getInstanceAccessData().getPassword())
+        authRequestForm.setUsername("admin")
         HttpEntity<AuthRequestForm> request = new HttpEntity<>(authRequestForm);
         HttpEntity<String> response = template.exchange(url, HttpMethod.POST, request, String.class);
         HttpHeaders headers = response.getHeaders();

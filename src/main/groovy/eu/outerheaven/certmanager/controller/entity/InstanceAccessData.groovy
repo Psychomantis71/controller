@@ -20,6 +20,8 @@ class InstanceAccessData {
 
     private Long expires
 
+    private String password
+
     @OneToOne
     @MapsId
     private Instance instance
@@ -62,5 +64,13 @@ class InstanceAccessData {
 
     void setExpires(Long expires) {
         this.expires = expires
+    }
+
+    String getPassword() {
+        return password
+    }
+
+    void setPassword(String password) {
+        this.password = password
     }
 }

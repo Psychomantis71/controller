@@ -13,4 +13,8 @@ class InstanceForm {
     Long port
 
     Boolean adopted
+
+    String newPassword
+
+    String newUsername
 }
