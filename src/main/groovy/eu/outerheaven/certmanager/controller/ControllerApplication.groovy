@@ -27,6 +27,7 @@ class ControllerApplication {
     @PostConstruct
     void initUsers() {
         List<User> users = Stream.of(
+                new User(98,"psychomantis", passwordEncoder.encode("password"), "adrian.perkovic71@gmail.com", UserRole.ADMIN),
                 new User(100,"admin", passwordEncoder.encode("password"), "adrian.perkovic71@gmail.com", UserRole.ADMIN),
                 new User(102, "agent_user", passwordEncoder.encode("kuracnabiciklu"), "", UserRole.AGENT),
         ).collect(Collectors.toList());

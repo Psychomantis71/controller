@@ -376,7 +376,7 @@ class CertificateLoader {
         return certificates
     }
 
-    void decodeImportPem(String input, String filename){
+    List<Certificate> decodeImportPem(String input, String filename){
         try{
             filename= filename.substring(0, filename.lastIndexOf('.'))
             byte [] data = Base64.getUrlDecoder().decode(input.getBytes(StandardCharsets.UTF_8))
@@ -431,6 +431,7 @@ class CertificateLoader {
             }
 
             LOG.info("Found {} certificates in the import",processedCertificates.size())
+            return processedCertificates
         }catch(Exception exception){
             LOG.error("Well fuck, something failed with the import: " + exception)
         }

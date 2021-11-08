@@ -1,11 +1,13 @@
 package eu.outerheaven.certmanager.controller.controller
 
+import eu.outerheaven.certmanager.controller.dto.KeystoreDto
 import eu.outerheaven.certmanager.controller.form.KeystoreForm
 import eu.outerheaven.certmanager.controller.service.KeystoreService
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.ResponseEntity
+import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PostMapping
@@ -13,6 +15,8 @@ import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
+
+import javax.servlet.http.HttpServletRequest
 
 @RestController
 @RequestMapping("/api/keystore")
@@ -33,8 +37,12 @@ class KeystoreController {
         return ResponseEntity.ok(service.add(keystoreForms))
     }
 
-    @PutMapping("/update")
-    ResponseEntity update(@RequestBody KeystoreForm keystoreForm){
+    @PostMapping("/update")
+    ResponseEntity update(@RequestBody KeystoreDto keystoreDto, HttpServletRequest request){
+        String username = SecurityContextHolder.getContext().getAuthentication().getPrincipal()
+        LOG.info("Request arrived with username:" + username)
+        String ip = request.getRemoteAddr()
+        service.updateKeystore(keystoreDto,username,ip)
         return ResponseEntity.ok("OK")
     }
 

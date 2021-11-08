@@ -5,11 +5,14 @@ import eu.outerheaven.certmanager.controller.dto.KeystoreDto
 import eu.outerheaven.certmanager.controller.entity.Certificate
 import eu.outerheaven.certmanager.controller.entity.Instance
 import eu.outerheaven.certmanager.controller.entity.Keystore
+import eu.outerheaven.certmanager.controller.entity.User
 import eu.outerheaven.certmanager.controller.form.InstanceForm
 import eu.outerheaven.certmanager.controller.form.KeystoreForm
 import eu.outerheaven.certmanager.controller.form.KeystoreFormGUI
+import eu.outerheaven.certmanager.controller.repository.CertificateRepository
 import eu.outerheaven.certmanager.controller.repository.InstanceRepository
 import eu.outerheaven.certmanager.controller.repository.KeystoreRepository
+import eu.outerheaven.certmanager.controller.repository.UserRepository
 import eu.outerheaven.certmanager.controller.util.CertificateLoader
 import eu.outerheaven.certmanager.controller.util.PreparedRequest
 import eu.outerheaven.certmanager.controller.util.deserializers.X509CertificateDeserializer
@@ -35,6 +38,15 @@ class KeystoreService {
 
     @Autowired
     private final InstanceRepository instanceRepository
+
+    @Autowired
+    private final UserRepository userRepository
+
+    @Autowired
+    private final CertificateRepository certificateRepository
+
+    @Autowired
+    private final MailService mailService
 
     ArrayList<KeystoreForm> getAll(){
         ArrayList<Keystore> all = repository.findAll() as ArrayList<Keystore>
@@ -158,6 +170,65 @@ class KeystoreService {
             LOG.error("Adding keystore to agent failed with error " + e )
         }
 
+    }
+
+    void updateKeystore(KeystoreDto keystoreDto, String username, String ip){
+        User user = userRepository.findByUserName(username)
+        LOG.info("User {} is requesting a to update a keystore", user.getUserName())
+        Instance instance = instanceRepository.findByUser(user)
+        LOG.info("The assigned instance/agent to user {} is {}", user.getUserName(), instance.getName())
+        if(instance.getIp() == ip){
+            LOG.info("User is accesing the endpoint from the expected IP address {}",ip)
+        }else{
+            LOG.warn("User is accesing the endpoint from a IP that does not match the agent IP {}",ip)
+        }
+        if(!instance.getAdopted()) throw new Exception("Off to the orphanage with yo ass")
+        Keystore targetKeystore = repository.findByInstanceIdAndAgentId(instance.getId(), keystoreDto.getId())
+        Keystore keystore = toClass(keystoreDto, targetKeystore.getId())
+        //TODO diffrence comparrison
+        List<Certificate> certificates = new ArrayList<>()
+        List<Certificate> currentcertificates = targetKeystore.getCertificates()
+        List<Certificate> unchangedCertificates = new ArrayList<>()
+        List<Certificate> modifiedCertificates = new ArrayList<>()
+        List<Certificate> addedCertificates = new ArrayList<>()
+        List<Certificate> removedCertificates = new ArrayList<>()
+
+        keystore.getCertificates().forEach(r->{
+            Certificate certificate = r
+            if(currentcertificates != null){
+                Certificate tmpCertificate = currentcertificates.stream()
+                        .filter(tmp -> certificate.getAgent_id().equals(tmp.getAgent_id()))
+                        .findAny()
+                        .orElse(null);
+                if(tmpCertificate == null){
+                    LOG.info("Found new certificate with alias {}", certificate.alias)
+                    addedCertificates.add(certificate)
+                }else {
+                    if (tmpCertificate.x509Certificate == certificate.x509Certificate && tmpCertificate.privateKey == certificate.privateKey) {
+                        LOG.info("Found unmodified certificate")
+                        unchangedCertificates.add(tmpCertificate)
+                        currentcertificates.remove(tmpCertificate)
+                    }else{
+                        LOG.info("Found modified certificate")
+                        certificate.setId(tmpCertificate.getId())
+                        modifiedCertificates.add(certificate)
+                        currentcertificates.remove(tmpCertificate)
+                    }
+                }
+            }
+        })
+        if(currentcertificates != null) removedCertificates.addAll(currentcertificates)
+        LOG.info("Found {} deleted certificates",removedCertificates.size())
+        certificates.addAll(unchangedCertificates)
+        certificates.addAll(modifiedCertificates)
+        certificates.addAll(addedCertificates)
+        targetKeystore.setCertificates(certificates)
+        repository.save(targetKeystore)
+        mailService.sendKeystoreAlert(modifiedCertificates, addedCertificates, removedCertificates,instance,targetKeystore)
+        removedCertificates.forEach(z->{
+            LOG.info("Certificate with alias {} and ID {} has been removed",z.alias, z.id)
+            certificateRepository.deleteById(z.getId())
+        })
     }
 
 

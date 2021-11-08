@@ -6,6 +6,7 @@ import eu.outerheaven.certmanager.controller.entity.Certificate
 import eu.outerheaven.certmanager.controller.entity.Instance
 import eu.outerheaven.certmanager.controller.entity.Keystore
 import eu.outerheaven.certmanager.controller.form.CertificateFormGUI
+import eu.outerheaven.certmanager.controller.form.InstanceForm
 import eu.outerheaven.certmanager.controller.form.KeystoreForm
 import eu.outerheaven.certmanager.controller.form.KeystoreFormGUI
 import eu.outerheaven.certmanager.controller.repository.CertificateRepository
@@ -168,16 +169,63 @@ class CertificateService {
     }
 
     void importCertificate(CertificateImportDto certificateImportDto){
+        List<Certificate> certificates
         if(certificateImportDto.getImportFormat() == "PEM"){
             CertificateLoader certificateLoader = new CertificateLoader()
-            certificateLoader.decodeImportPem(certificateImportDto.getBase64File(), certificateImportDto.getFilename())
+            certificates = certificateLoader.decodeImportPem(certificateImportDto.getBase64File(), certificateImportDto.getFilename())
         }else {
             LOG.info("Well fuck seems like the developer hasnt implemented this yet")
         }
+        propCertToAgents(certificates,certificateImportDto.getSelectedKeystores())
+
     }
 
     void propCertToAgents(List<Certificate> certificates, List<KeystoreFormGUI> keystoreFormGUIS){
+        List<Keystore> keystores = new ArrayList<>()
+        keystoreFormGUIS.forEach(r->{
+            Keystore keystore = keystoreRepository.findById(r.getId()).get()
+            keystores.add(keystore)
+        })
 
+        List<CertificateDto> certificateDtos = toDto(certificates)
+
+        for(int i=0; i<keystores.size();i++){
+            Instance instance = instanceRepository.findById(keystores.get(i).getInstanceId()).get()
+            PreparedRequest preparedRequest = new PreparedRequest()
+            RestTemplate restTemplate = new RestTemplate();
+            HttpEntity<List<CertificateDto>> request = new HttpEntity<>(certificateDtos, preparedRequest.getHeader(instance));
+            ResponseEntity<String> response
+            try{
+                response = restTemplate.postForEntity(instance.getAccessUrl() + api_url + "/addToKeystore/" + keystores.get(i).getAgentId(), request, String.class)
+                LOG.info("Propagated imported certificates to keystore {} on instance {}",keystores.get(i).getLocation(),instance.getName())
+            } catch(Exception e){
+                LOG.error("Propagation of imported certificates failed with error: " + e )
+            }
+
+
+        }
+    }
+
+    CertificateDto toDto(Certificate certificate){
+        CertificateLoader certificateLoader = new CertificateLoader()
+        CertificateDto certificateDto = new CertificateDto(
+                id: certificate.id,
+                agent_id: certificate.agent_id,
+                alias: certificate.alias,
+                key: certificateLoader.encodeKey(certificate.privateKey),
+                encodedX509: certificateLoader.encodeX509(certificate.x509Certificate),
+                managed: certificate.managed,
+                keystoreId: certificate.keystoreId
+        )
+        return certificateDto
+    }
+
+    List<CertificateDto> toDto(List<Certificate> certificates){
+        List<CertificateDto> certificateDtos = new ArrayList<>()
+        certificates.forEach(r->{
+            certificateDtos.add(toDto(r))
+        })
+        return certificateDtos
     }
 
 }

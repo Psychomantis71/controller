@@ -361,7 +361,7 @@ export default {
       this.getBase64(this.fileToUpload).then(
         data => {
           this.importItem.base64File=data
-          this.importItem.name=this.fileToUpload.name
+          this.importItem.filename=this.fileToUpload.name
           console.log(this.importItem)
           this.$axios
             .post('http://localhost:8091/api/certificate/import', this.importItem)

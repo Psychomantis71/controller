@@ -15,6 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpEntity
 import org.springframework.http.ResponseEntity
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
 import org.springframework.stereotype.Service
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.client.RestTemplate
@@ -111,44 +112,39 @@ class InstanceService {
         for(int i=0;i<form.size();i++){
             Instance instance = repository.findById(form.get(i).getId()).get()
             CertificateLoader  certificateLoader = new CertificateLoader()
-            LOG.info("1")
             //Generate tmp username so entity can be saved and fetch id
             String tmpusername = certificateLoader.generateRandomName()
             while (userRepository.findByUserName(tmpusername) != null){
                 tmpusername = certificateLoader.generateRandomName()
             }
-            LOG.info("2")
             //generate password for new user, create user and apply correct username
+            BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder()
             String password = certificateLoader.generateRandomAlphanumeric()
             User user = new User()
             user.setUserName(tmpusername)
-            user.setPassword(password)
+            user.setPassword(passwordEncoder.encode(password))
             user.setUserRole(UserRole.AGENT_ADOPTED)
-            LOG.info("3")
             userRepository.save(user)
             Long userId = userRepository.findByUserName(tmpusername).getId()
-            LOG.info("3-3")
             user.setUserName("adopted_agent_" + userId)
-            LOG.info("3-4")
             userRepository.save(user)
-            LOG.info("4")
-
             instance.setAdopted(true)
-
             PreparedRequest preparedRequest = new PreparedRequest()
             RestTemplate restTemplate = new RestTemplate();
             form.get(i).setAdopted(true)
             form.get(i).setNewUsername("adopted_agent_" + userId)
             form.get(i).setNewPassword(password)
-            LOG.info("4-1")
             HttpEntity<InstanceForm> request = new HttpEntity<>(form.get(i), preparedRequest.getHeader(instance));
             ResponseEntity<String> response
-            LOG.info("5")
             try{
                 response = restTemplate.postForEntity(instance.getAccessUrl() + api_url + "/update", request, String.class)
-                LOG.info(response.getBody().toString())
                 instance.instanceAccessData.setPassword(response.getBody().toString())
                 instance.setUser(user)
+                //MAKNI MEEEEEEEEEEEEEEEEEEEEEEEEEEEEE
+                User moj_korisnik = userRepository.findByUserName("admin")
+                List<User> korsnici = new ArrayList<>()
+                korsnici.add(moj_korisnik)
+                instance.setAssignedUsers(korsnici)
                 repository.save(instance)
                 LOG.info("Entity with IP {}, hostname {}, and port {} has been adopted and recognized by the target agent!",instance.getIp(),instance.getHostname(),instance.getPort())
             } catch(Exception e){

@@ -1,6 +1,7 @@
 package eu.outerheaven.certmanager.controller.repository
 
 import eu.outerheaven.certmanager.controller.entity.Instance
+import eu.outerheaven.certmanager.controller.entity.User
 import org.springframework.data.repository.CrudRepository
 
 interface InstanceRepository  extends CrudRepository<Instance, Long> {
@@ -9,10 +10,12 @@ interface InstanceRepository  extends CrudRepository<Instance, Long> {
 
     Instance findByHostname(String hostname)
 
-    Instance findByIp(String name)
+    Instance findByIp(String ip)
 
     Instance findByPortAndIp(Long port, String ip)
 
     Instance findByPortAndHostname(Long port, String hostname)
+
+    Instance findByUser(User user)
 
 }

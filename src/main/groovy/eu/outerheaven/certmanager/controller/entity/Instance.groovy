@@ -5,6 +5,7 @@ import javax.persistence.Entity
 import javax.persistence.GeneratedValue
 import javax.persistence.GenerationType
 import javax.persistence.Id
+import javax.persistence.OneToMany
 import javax.persistence.OneToOne
 
 @Entity
@@ -29,6 +30,9 @@ class Instance {
 
     @OneToOne(cascade = CascadeType.ALL, mappedBy = "instance", orphanRemoval = true)
     private InstanceAccessData instanceAccessData
+
+    @OneToMany
+    private List<User> assignedUsers
 
     Long getId() {
         return id
@@ -92,6 +96,14 @@ class Instance {
 
     void setInstanceAccessData(InstanceAccessData instanceAccessData) {
         this.instanceAccessData = instanceAccessData
+    }
+
+    List<User> getAssignedUsers() {
+        return assignedUsers
+    }
+
+    void setAssignedUsers(List<User> assignedUsers) {
+        this.assignedUsers = assignedUsers
     }
 
     String getAccessUrl(){

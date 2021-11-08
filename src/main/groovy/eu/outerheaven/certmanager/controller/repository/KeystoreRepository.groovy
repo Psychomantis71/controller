@@ -5,4 +5,6 @@ import org.springframework.data.repository.CrudRepository
 
 interface KeystoreRepository extends CrudRepository<Keystore, Long> {
 
+    Keystore findByInstanceIdAndAgentId(Long instanceId, Long AgentId)
+
 }
