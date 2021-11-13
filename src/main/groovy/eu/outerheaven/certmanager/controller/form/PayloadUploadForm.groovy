@@ -1,6 +1,7 @@
 package eu.outerheaven.certmanager.controller.form
 
 import groovy.transform.ToString
+
 @ToString(includeFields = true)
 class PayloadUploadForm {
 

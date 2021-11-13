@@ -23,6 +23,7 @@
                 dismissible
               >
                 {{ error }}
+                <v-img src="https://media2.giphy.com/media/yx400dIdkwWdsCgWYp/giphy.gif" width="80%" height="80%"></v-img>
               </v-alert>
             </v-flex>
             <v-flex>

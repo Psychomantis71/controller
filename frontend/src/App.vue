@@ -127,9 +127,10 @@ export default {
           { title: 'Keystores', path: '/keystores', icon: 'vpn_key' },
           { title: 'Certificates', path: '/certificates', icon: 'badge' },
           { title: 'Admin settings', path: '/home', icon: 'admin_panel_settings' },
-          { title: 'Ca vault', path: '/CaVault', icon: 'admin_panel_settings' },
+          { title: 'Ca vault', path: '/CaVault', icon: 'assured_workload' },
           { title: 'Test', path: '/Test', icon: 'admin_panel_settings' },
           { title: 'Upload to agent', path: '/uploadtoagent', icon: 'upload' },
+          { title: 'Users', path: '/users', icon: 'supervisor_account' },
         ];
       }
       return [];

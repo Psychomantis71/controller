@@ -10,6 +10,7 @@ import Certificates from "@/components/Certificates";
 import CaVault from "@/components/CaVault"
 import Test from "@/components/Test"
 import UploadToAgent from "@/components/UploadToAgent";
+import Users from "@/components/Users";
 Vue.use(Router);
 
 const router = new Router({
@@ -58,6 +59,11 @@ const router = new Router({
       path: '/uploadtoagent',
       name: 'UploadToAgent',
       component: UploadToAgent,
+    },
+    {
+      path: '/users',
+      name: 'Users',
+      component: Users,
     },
     {
       path: '/signIn',

@@ -49,21 +49,21 @@ class MailService {
         // true = text/html
 
         if(addedCertificates.size()>0){
-            text = text + "<h2>Added certificates: </h2>"
+            text = text + "<h2 style=\"color:green;\">Added certificates: </h2>"
             addedCertificates.forEach(r->{
                 text = text + "<p>Certificate with ID ${r.getId()} alias ${r.getAlias()}, subject ${r.getX509Certificate().getSubjectDN()} has been added</p>"
             })
         }
 
         if(modifiedCertificates.size()>0){
-            text = text + "<h2>Modified certificates: </h2>"
+            text = text + "<h2 style=\"color:blue;\">Modified certificates: </h2>"
             modifiedCertificates.forEach(r->{
                 text = text + "<p>Certificate with ID ${r.getId()} alias ${r.getAlias()}, subject ${r.getX509Certificate().getSubjectDN()} has been modified</p>"
             })
         }
 
         if(removedCertificates.size()>0){
-            text = text + "<h2>Removed certificates: </h2>"
+            text = text + "<h2 style=\"color:red;\">Removed certificates: </h2>"
             removedCertificates.forEach(r->{
                 text = text + "<p>Certificate with ID ${r.getId()} alias ${r.getAlias()}, subject ${r.getX509Certificate().getSubjectDN()} has been removed</p>"
             })
