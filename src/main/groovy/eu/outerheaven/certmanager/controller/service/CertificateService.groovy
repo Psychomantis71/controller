@@ -19,6 +19,7 @@ import org.apache.tomcat.util.http.fileupload.FileUtils
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.core.io.ByteArrayResource
 import org.springframework.core.io.Resource
 import org.springframework.core.io.UrlResource
 import org.springframework.http.HttpEntity
@@ -131,7 +132,20 @@ class CertificateService {
         return status
     }
 
-    Resource exportAsPem(Long certificateId){
+    String getCleanCertName(Long certificateId){
+        Certificate certificate = repository.findById(certificateId).get()
+        String filename =""
+        if(certificate.getAlias() == null){
+            filename ="certificate.cer"
+        }else {
+            filename =certificate.getAlias() + ".cer"
+        }
+        filename = filename.replaceAll("[^\\dA-Za-z. ]", "").replaceAll("\\s+", "_")
+
+        return filename
+    }
+
+    Resource exportAsPem(Long certificateId, String filename){
         CertificateLoader certificateLoader = new CertificateLoader()
         String folderName = certificateLoader.generateRandomName()
         Path path = Paths.get(folderName)
@@ -142,13 +156,6 @@ class CertificateService {
         try{
             new File(path.toString()).mkdirs()
             Certificate certificate = repository.findById(certificateId).get()
-            String filename =""
-            if(certificate.getAlias() == null){
-                filename ="certificate.cer"
-            }else {
-                filename =certificate.getAlias() + ".cer"
-            }
-            filename = filename.replaceAll("[^\\dA-Za-z. ]", "").replaceAll("\\s+", "_")
             certificateLoader.writeCertToFileBase64Encoded(certificate.getX509Certificate(),folderName + "/" + filename)
             if(certificate.privateKey != null){
                 certificateLoader.writeKeyToFileBase64Encoded(certificate.getPrivateKey(), folderName + "/" + filename)
@@ -156,16 +163,16 @@ class CertificateService {
             String fullPath =  "./" + folderName + "/" + filename
             LOG.info("Path to the file is " + fullPath)
             path = Paths.get(folderName + "/" + filename)
-            Resource resource = new UrlResource(path.toUri())
+            File file = new File(folderName + "/" + filename)
+            byte[] fileContent = Files.readAllBytes(file.toPath())
+
+            //Resource resource = new UrlResource(path.toUri())
+            Resource resource = new ByteArrayResource(fileContent)
+            FileUtils.deleteDirectory(path.getParent().toFile())
             return resource
         }catch(Exception exception){
             LOG.error("Failed exporting certificate:" + exception)
         }
-    }
-
-    void deleteTempFile(Resource resource){
-        Path path = Paths.get(resource.getURI())
-        FileUtils.deleteDirectory(path.getParent().toFile())
     }
 
     void importCertificate(CertificateImportDto certificateImportDto){

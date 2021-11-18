@@ -5,6 +5,7 @@ import eu.outerheaven.certmanager.controller.entity.InstanceAccessData
 import eu.outerheaven.certmanager.controller.entity.User
 import eu.outerheaven.certmanager.controller.entity.UserRole
 import eu.outerheaven.certmanager.controller.form.InstanceForm
+import eu.outerheaven.certmanager.controller.form.UserForm
 import eu.outerheaven.certmanager.controller.repository.InstanceRepository
 import eu.outerheaven.certmanager.controller.repository.UserRepository
 import eu.outerheaven.certmanager.controller.util.CertificateLoader
@@ -154,6 +155,47 @@ class InstanceService {
 
         }
 
+    }
+
+    List<UserForm> getAssignedUsers(Long instanceId){
+        Instance instance = repository.findById(instanceId).get()
+        List<UserForm> assignedUsers = toUserForm(instance.getAssignedUsers())
+        return assignedUsers
+    }
+
+    void setAssignedUsers(Long instanceId, List<Long> userIds){
+
+
+
+        Instance instance = repository.findById(instanceId).get()
+
+        LOG.info("Request to assign users to an instance has arrived, a total of {} users will be assigned to instance {}", userIds.size(), instance.getName())
+
+        List<User> users = new ArrayList<>()
+
+        userIds.forEach(r->{
+            User user = userRepository.findById(r).get()
+            users.add(user)
+        })
+
+        instance.setAssignedUsers(users)
+        repository.save(instance)
+    }
+
+    UserForm toUserForm(User user){
+        UserForm userForm = new UserForm(
+                id: user.id,
+                username: user.userName,
+                userRole: user.userRole,
+                email: user.email
+        )
+        return userForm
+    }
+
+    List<UserForm> toUserForm(List<User> users){
+        List<UserForm> userForms = new ArrayList<>()
+        users.forEach(r->userForms.add(toUserForm(r)))
+        return userForms
     }
 
 }

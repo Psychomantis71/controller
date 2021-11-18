@@ -30,6 +30,77 @@
         >
           Delete
         </v-btn>
+
+
+
+        <v-dialog
+          v-model="dialog"
+          max-width="800px"
+        >
+          <template v-slot:activator="{ on, attrs }">
+            <v-btn
+              dark
+              color="teal lighten-1"
+              class="ma-2"
+              v-bind="attrs"
+              v-on="on"
+              @click="getAssignedData"
+            >
+              Assign users to instance
+            </v-btn>
+          </template>
+          <v-card>
+            <v-card-title>
+              <span class="text-h5">Assign users to instance</span>
+            </v-card-title>
+
+            <v-card-text>
+              <v-container>
+                <v-row>
+                  <v-col
+                    cols="12"
+                    sm="6"
+                    md="12"
+                  >
+                    <v-autocomplete
+                      v-model="assignedUsers"
+                      :items="allUsers"
+                      outlined
+                      dense
+                      chips
+                      small-chips
+                      label="Assigned users"
+                      multiple
+                      item-value="id"
+                      item-text="username"
+                    />
+                  </v-col>
+                </v-row>
+              </v-container>
+            </v-card-text>
+
+            <v-card-actions>
+              <v-spacer />
+              <v-btn
+                color="blue darken-1"
+                text
+                @click="close"
+              >
+                Cancel
+              </v-btn>
+              <v-btn
+                color="blue darken-1"
+                text
+                @click="save"
+              >
+                Save
+              </v-btn>
+            </v-card-actions>
+          </v-card>
+        </v-dialog>
+
+
+
         <v-card>
           <v-card-title>
             <v-text-field
@@ -69,6 +140,9 @@ export default {
   data() {
     return {
       selected: [],
+      dialog: false,
+      allUsers:[],
+      assignedUsers:[],
       instances: [],
       responseObj: {
         url: '',
@@ -110,6 +184,41 @@ export default {
           this.instances = error;
         });
     },
+    getAllUserData() {
+      this.$axios
+        .get('http://localhost:8091/api/user/all-gui')
+        .then((response) => {
+          console.log('Get response: ', response.data);
+          this.allUsers = response.data;
+        })
+        .catch((error) => {
+          this.alert = true;
+          this.allUsers = error;
+        });
+    },
+    getAssignedUserData() {
+      this.$axios
+        .get(`http://localhost:8091/api/instance/${this.selected[0].id}/get-assigned`)
+        .then((response) => {
+          console.log('Get response: ', response.data);
+          this.assignedUsers = response.data;
+        })
+        .catch((error) => {
+          this.alert = true;
+          this.assignedUsers = error;
+        });
+    },
+    setAssignedUserData() {
+      this.$axios
+        .post(`http://localhost:8091/api/instance/${this.selected[0].id}/set-assigned`, this.assignedUsers)
+        .then((response) => {
+          console.log('Get response: ', response.data);
+        })
+        .catch((error) => {
+          this.alert = true;
+          console.log(error)
+        });
+    },
     getColor(adopted) {
       if (adopted === false) return 'red';
       return 'green';
@@ -131,6 +240,17 @@ export default {
           console.log('Error while adopting: ', error);
         });
     },
+    close() {
+      this.dialog = false;
+    },
+    save() {
+      this.setAssignedUserData();
+      this.close();
+    },
+    getAssignedData(){
+      this.getAllUserData();
+      this.getAssignedUserData();
+    }
   },
 };
 </script>

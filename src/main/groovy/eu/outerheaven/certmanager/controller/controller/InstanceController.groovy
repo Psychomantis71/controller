@@ -1,6 +1,7 @@
 package eu.outerheaven.certmanager.controller.controller
 
 import eu.outerheaven.certmanager.controller.form.InstanceForm
+import eu.outerheaven.certmanager.controller.form.UserForm
 import eu.outerheaven.certmanager.controller.service.InstanceService
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -8,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
@@ -52,6 +54,16 @@ class InstanceController {
         }
 
 
+    }
+
+    @GetMapping("/{instanceId}/get-assigned")
+    ResponseEntity getAssigned(@PathVariable Long instanceId){
+        return ResponseEntity.ok(service.getAssignedUsers(instanceId))
+    }
+
+    @PostMapping("/{instanceId}/set-assigned")
+    ResponseEntity adoptRequest(@PathVariable Long instanceId, @RequestBody List<Long> userIds) {
+        ResponseEntity.ok(service.setAssignedUsers(instanceId, userIds))
     }
 }
 
