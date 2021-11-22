@@ -27,6 +27,7 @@
           dark
           color="teal lighten-1"
           class="ma-2"
+          @click="removeInstances"
         >
           Delete
         </v-btn>
@@ -183,6 +184,19 @@ export default {
           this.alert = true;
           this.instances = error;
         });
+    },
+    removeInstances() {
+      console.log(this.selected)
+      this.$axios
+        .post('http://localhost:8091/api/instance/remove', this.selected)
+        .then((response) => {
+          console.log('Get response: ', response.data);
+        })
+        .catch((error) => {
+          this.alert = true;
+          console.log(error)
+        });
+      this.getInstanceData()
     },
     getAllUserData() {
       this.$axios

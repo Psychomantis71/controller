@@ -26,7 +26,7 @@ class Keystore {
 
     private String password
 
-    @OneToMany(cascade = CascadeType.ALL, mappedBy = "keystoreId")
+    @OneToMany(cascade = CascadeType.ALL, mappedBy = "keystoreId", orphanRemoval = true)
     private List<Certificate> certificates
 
     Long getId() {

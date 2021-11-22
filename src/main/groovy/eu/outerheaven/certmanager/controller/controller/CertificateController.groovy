@@ -2,6 +2,7 @@ package eu.outerheaven.certmanager.controller.controller
 
 import eu.outerheaven.certmanager.controller.dto.CertificateDto
 import eu.outerheaven.certmanager.controller.dto.CertificateImportDto
+import eu.outerheaven.certmanager.controller.form.CertificateFormGUI
 import eu.outerheaven.certmanager.controller.form.KeystoreForm
 import eu.outerheaven.certmanager.controller.service.CaVaultService
 import eu.outerheaven.certmanager.controller.service.CertificateService
@@ -54,9 +55,9 @@ class CertificateController {
         return ResponseEntity.ok("OK")
     }
 
-    @DeleteMapping("/delete")
-    ResponseEntity delete(@RequestBody KeystoreForm keystoreForm){
-        return ResponseEntity.ok("OK")
+    @PostMapping("/delete")
+    ResponseEntity delete(@RequestBody List<CertificateFormGUI> certificateFormGUIS){
+        return ResponseEntity.ok(service.delete(certificateFormGUIS))
     }
 
     @GetMapping("/test-generation")

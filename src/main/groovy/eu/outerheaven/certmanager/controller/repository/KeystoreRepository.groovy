@@ -7,4 +7,6 @@ interface KeystoreRepository extends CrudRepository<Keystore, Long> {
 
     Keystore findByInstanceIdAndAgentId(Long instanceId, Long AgentId)
 
+    List<Keystore> findByInstanceId(Long instanceId)
+
 }

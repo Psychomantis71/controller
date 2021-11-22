@@ -2,11 +2,13 @@ package eu.outerheaven.certmanager.controller.service
 
 import eu.outerheaven.certmanager.controller.entity.Instance
 import eu.outerheaven.certmanager.controller.entity.InstanceAccessData
+import eu.outerheaven.certmanager.controller.entity.Keystore
 import eu.outerheaven.certmanager.controller.entity.User
 import eu.outerheaven.certmanager.controller.entity.UserRole
 import eu.outerheaven.certmanager.controller.form.InstanceForm
 import eu.outerheaven.certmanager.controller.form.UserForm
 import eu.outerheaven.certmanager.controller.repository.InstanceRepository
+import eu.outerheaven.certmanager.controller.repository.KeystoreRepository
 import eu.outerheaven.certmanager.controller.repository.UserRepository
 import eu.outerheaven.certmanager.controller.util.CertificateLoader
 import eu.outerheaven.certmanager.controller.util.PreparedRequest
@@ -36,6 +38,9 @@ class InstanceService {
 
     @Autowired
     private final UserRepository userRepository
+
+    @Autowired
+    private final KeystoreRepository keystoreRepository
 
     boolean adoptRequest(InstanceForm form){
         //TODO PULL DEFAULT AGENT PASSWORD WHEN SET IN CONFIG
@@ -68,44 +73,6 @@ class InstanceService {
         ArrayList<InstanceForm> all_form = toForm(all)
         return all_form
 
-    }
-
-    InstanceForm toForm(Instance instance){
-        InstanceForm instanceForm = new InstanceForm(
-                id: instance.id,
-                name: instance.name,
-                hostname: instance.hostname,
-                ip: instance.ip,
-                port: instance.port,
-                adopted: instance.adopted
-        )
-        return instanceForm
-    }
-
-    ArrayList<InstanceForm> toForm(ArrayList<Instance> instance){
-        ArrayList<InstanceForm> instanceFormArrayList = new ArrayList<>()
-        instance.forEach( r -> instanceFormArrayList.add(toForm(r)))
-        return instanceFormArrayList
-    }
-
-    Instance toClass(InstanceForm form){
-        Instance instance = new Instance(
-                id: form.id,
-                name: form.name,
-                hostname: form.hostname,
-                ip: form.ip,
-                port: form.port,
-                adopted: form.adopted
-        )
-        return instance
-    }
-
-    ArrayList<Instance> toClass(ArrayList<InstanceForm> form){
-        ArrayList<Instance> instances = new ArrayList<>()
-        form.forEach(r ->
-            instances.add(toClass(r))
-        )
-        return instances
     }
 
     void adopt(ArrayList<InstanceForm> form){
@@ -182,6 +149,30 @@ class InstanceService {
         repository.save(instance)
     }
 
+    void removeInstances(List<InstanceForm> instanceForms){
+
+        List<Instance> instances = new ArrayList<>()
+        instanceForms.forEach(r-> {
+            Instance instance = repository.findById(r.getId()).get()
+            instances.add(instance)
+        })
+        List<Keystore> keystores = new ArrayList<>()
+        instances.forEach(r->{
+            keystores.addAll(keystoreRepository.findByInstanceId(r.getId()))
+        })
+
+        keystores.forEach(r->{
+            keystoreRepository.deleteById(r.id)
+        })
+
+        instances.forEach(r->{
+            repository.deleteById(r.id)
+            LOG.info("Deleted instace {} from database, and all keystores/certificates under it", r.getName())
+        })
+
+
+    }
+
     UserForm toUserForm(User user){
         UserForm userForm = new UserForm(
                 id: user.id,
@@ -198,4 +189,41 @@ class InstanceService {
         return userForms
     }
 
+    InstanceForm toForm(Instance instance){
+        InstanceForm instanceForm = new InstanceForm(
+                id: instance.id,
+                name: instance.name,
+                hostname: instance.hostname,
+                ip: instance.ip,
+                port: instance.port,
+                adopted: instance.adopted
+        )
+        return instanceForm
+    }
+
+    ArrayList<InstanceForm> toForm(ArrayList<Instance> instance){
+        ArrayList<InstanceForm> instanceFormArrayList = new ArrayList<>()
+        instance.forEach( r -> instanceFormArrayList.add(toForm(r)))
+        return instanceFormArrayList
+    }
+
+    Instance toClass(InstanceForm form){
+        Instance instance = new Instance(
+                id: form.id,
+                name: form.name,
+                hostname: form.hostname,
+                ip: form.ip,
+                port: form.port,
+                adopted: form.adopted
+        )
+        return instance
+    }
+
+    ArrayList<Instance> toClass(ArrayList<InstanceForm> form){
+        ArrayList<Instance> instances = new ArrayList<>()
+        form.forEach(r ->
+                instances.add(toClass(r))
+        )
+        return instances
+    }
 }

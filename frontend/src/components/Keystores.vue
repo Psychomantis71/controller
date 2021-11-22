@@ -121,19 +121,11 @@
             </v-card-actions>
           </v-card>
         </v-dialog>
-
-
         <v-btn
           dark
           color="teal lighten-1"
           class="ma-2"
-        >
-          Edit
-        </v-btn>
-        <v-btn
-          dark
-          color="teal lighten-1"
-          class="ma-2"
+          @click="deleteKeystores"
         >
           Delete
         </v-btn>
@@ -242,6 +234,17 @@ export default {
         .catch((error) => {
           this.alert = true;
           this.agentInstances = error;
+        });
+    },
+    deleteKeystores() {
+      this.$axios
+        .post('http://localhost:8091/api/keystore/remove', this.selected)
+        .then((response) => {
+          console.log('Post response: ', response.data);
+        })
+        .catch((error) => {
+          this.alert = true;
+          console.log(error)
         });
     },
     getInstanceData() {

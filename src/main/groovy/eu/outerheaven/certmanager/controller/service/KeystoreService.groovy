@@ -231,5 +231,40 @@ class KeystoreService {
         })
     }
 
+    void delete(List<KeystoreFormGUI> keystoreFormGUIS){
+        List<Keystore> keystores = new ArrayList<>()
+        keystoreFormGUIS.forEach(r->{
+            Keystore keystore = repository.findById(r.id).get()
+            keystores.add(keystore)
+        })
+
+        keystores.forEach(r->{
+            try{
+                LOG.info("Deleting keystore from agent")
+                deleteFromAgent(r)
+                LOG.info("Deleting keystore from database on instance {}, under the path {}", instanceRepository.findById(r.instanceId).get().name, r.location)
+                repository.deleteById(r.id)
+            }catch(Exception exception){
+                LOG.error("Error while trying to delete keystore with ID {}: {}",r.id, exception)
+            }
+        })
+    }
+
+    private void deleteFromAgent(Keystore keystore){
+
+        Instance instance = instanceRepository.findById(keystore.getInstanceId()).get()
+        PreparedRequest preparedRequest = new PreparedRequest()
+        RestTemplate restTemplate = new RestTemplate();
+        HttpEntity request = new HttpEntity<>(preparedRequest.getHeader(instance))
+
+        ResponseEntity response = restTemplate.exchange(
+                instance.getAccessUrl() + api_url + "/" + keystore.getAgentId(),
+                HttpMethod.DELETE,
+                request,
+                String.class
+        );
+        LOG.debug("Delete from agent returns: " + response.statusCode)
+
+    }
 
 }

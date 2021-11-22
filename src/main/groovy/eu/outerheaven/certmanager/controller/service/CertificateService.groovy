@@ -213,6 +213,10 @@ class CertificateService {
         }
     }
 
+    void delete(List<CertificateFormGUI> certificateFormGUIS){
+
+    }
+
     CertificateDto toDto(Certificate certificate){
         CertificateLoader certificateLoader = new CertificateLoader()
         CertificateDto certificateDto = new CertificateDto(

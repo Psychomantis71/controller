@@ -2,6 +2,7 @@ package eu.outerheaven.certmanager.controller.controller
 
 import eu.outerheaven.certmanager.controller.dto.KeystoreDto
 import eu.outerheaven.certmanager.controller.form.KeystoreForm
+import eu.outerheaven.certmanager.controller.form.KeystoreFormGUI
 import eu.outerheaven.certmanager.controller.service.KeystoreService
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -46,9 +47,9 @@ class KeystoreController {
         return ResponseEntity.ok("OK")
     }
 
-    @DeleteMapping("/delete")
-    ResponseEntity delete(@RequestBody KeystoreForm keystoreForm){
-        return ResponseEntity.ok("OK")
+    @PostMapping("/remove")
+    ResponseEntity delete(@RequestBody List<KeystoreFormGUI> keystoreFormGUIS ){
+        return ResponseEntity.ok(service.delete(keystoreFormGUIS))
     }
 
 
