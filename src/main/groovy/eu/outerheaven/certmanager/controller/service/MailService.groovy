@@ -38,7 +38,7 @@ class MailService {
         helper.setFrom("obama@yourass.com")
         helper.setTo(setTo);
 
-        helper.setSubject("OSCM Alert");
+        helper.setSubject("OSCM Modification Alert");
         String text
         text = "<h1>OSCM has detected modifications on a keystore</h1>"
         text = text + "<p> Affected instance name ${instance.getName()} and IP ${instance.getIp()} </p>"

@@ -219,15 +219,22 @@ class KeystoreService {
         })
         if(currentcertificates != null) removedCertificates.addAll(currentcertificates)
         LOG.info("Found {} deleted certificates",removedCertificates.size())
+        targetKeystore.getCertificates().clear()
+        targetKeystore.getCertificates().addAll(unchangedCertificates)
+        targetKeystore.getCertificates().addAll(modifiedCertificates)
+        targetKeystore.getCertificates().addAll(addedCertificates)
+
+        /*
         certificates.addAll(unchangedCertificates)
         certificates.addAll(modifiedCertificates)
         certificates.addAll(addedCertificates)
         targetKeystore.setCertificates(certificates)
+        */
         repository.save(targetKeystore)
         mailService.sendKeystoreAlert(modifiedCertificates, addedCertificates, removedCertificates,instance,targetKeystore)
         removedCertificates.forEach(z->{
             LOG.info("Certificate with alias {} and ID {} has been removed",z.alias, z.id)
-            certificateRepository.deleteById(z.getId())
+            //certificateRepository.deleteById(z.getId())
         })
     }
 

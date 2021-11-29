@@ -1,5 +1,6 @@
 package eu.outerheaven.certmanager.controller.service
 
+import eu.outerheaven.certmanager.controller.dto.CertificateImportDto
 import eu.outerheaven.certmanager.controller.entity.CaCertificate
 import eu.outerheaven.certmanager.controller.form.CaCertificateForm
 import eu.outerheaven.certmanager.controller.form.CaCertificateFormGUI
@@ -7,6 +8,8 @@ import eu.outerheaven.certmanager.controller.form.CertificateFormGUI
 import eu.outerheaven.certmanager.controller.form.NewSignedCertificateForm
 import eu.outerheaven.certmanager.controller.repository.CaCertificateRepository
 import eu.outerheaven.certmanager.controller.repository.CertificateRepository
+import eu.outerheaven.certmanager.controller.util.CertificateLoader
+import org.apache.tomcat.util.http.fileupload.FileUtils
 import org.bouncycastle.asn1.ASN1Encodable
 import org.bouncycastle.asn1.DERSequence
 import org.bouncycastle.asn1.x500.X500Name
@@ -29,8 +32,13 @@ import org.bouncycastle.util.encoders.Base64
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.core.io.ByteArrayResource
+import org.springframework.core.io.Resource
 import org.springframework.stereotype.Service
 
+import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.Paths
 import java.security.*
 import java.security.cert.Certificate
 import java.security.cert.X509Certificate
@@ -375,6 +383,76 @@ class CaVaultService {
         return status
     }
 
+    String getCleanCertName(Long certificateId){
+        CaCertificate caCertificate = repository.findById(certificateId).get()
+        String filename =""
+        if(caCertificate.getAlias() == null){
+            filename ="certificate.cer"
+        }else {
+            filename =caCertificate.getAlias() + ".cer"
+        }
+        filename = filename.replaceAll("[^\\dA-Za-z. ]", "").replaceAll("\\s+", "_")
+
+        return filename
+    }
+
+    Resource exportAsPem(Long certificateId, String filename){
+        CertificateLoader certificateLoader = new CertificateLoader()
+        String folderName = certificateLoader.generateRandomName()
+        Path path = Paths.get(folderName)
+        while (Files.exists(path)){
+            folderName = certificateLoader.generateRandomName()
+            path=Paths.get(folderName)
+        }
+        try{
+            new File(path.toString()).mkdirs()
+            CaCertificate caCertificate = repository.findById(certificateId).get()
+            certificateLoader.writeCertToFileBase64Encoded(caCertificate.getX509Certificate(),folderName + "/" + filename)
+            if(caCertificate.privateKey != null){
+                certificateLoader.writeKeyToFileBase64Encoded(caCertificate.getPrivateKey(), folderName + "/" + filename)
+            }
+            String fullPath =  "./" + folderName + "/" + filename
+            LOG.info("Path to the file is " + fullPath)
+            path = Paths.get(folderName + "/" + filename)
+            File file = new File(folderName + "/" + filename)
+            byte[] fileContent = Files.readAllBytes(file.toPath())
+
+            //Resource resource = new UrlResource(path.toUri())
+            Resource resource = new ByteArrayResource(fileContent)
+            FileUtils.deleteDirectory(path.getParent().toFile())
+            return resource
+        }catch(Exception exception){
+            LOG.error("Failed exporting certificate:" + exception)
+        }
+    }
+
+    void importCertificate(CertificateImportDto certificateImportDto){
+        List<CaCertificate> certificates
+        if(certificateImportDto.getImportFormat() == "PEM"){
+            CertificateLoader certificateLoader = new CertificateLoader()
+            certificates = certToCaCert(certificateLoader.decodeImportPem(certificateImportDto.getBase64File(), certificateImportDto.getFilename()))
+
+        }else {
+            LOG.info("Well fuck seems like the developer hasnt implemented this yet")
+        }
+
+    }
+
+    private CaCertificate certToCaCert(eu.outerheaven.certmanager.controller.entity.Certificate certificate){
+        CaCertificate caCertificate = new CaCertificate(
+                alias: certificate.alias,
+                privateKey: certificate.privateKey,
+                x509Certificate: certificate.x509Certificate,
+                managed: certificate.managed,
+        )
+        return caCertificate
+    }
+
+    private List<CaCertificate> certToCaCert(List<eu.outerheaven.certmanager.controller.entity.Certificate> certificates){
+        List<CaCertificate> caCertificates = new ArrayList<>()
+        certificates.forEach(r->{caCertificates.add(certToCaCert(r))})
+        return caCertificates
+    }
 
 
 }

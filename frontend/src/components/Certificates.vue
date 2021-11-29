@@ -19,23 +19,9 @@
           dark
           color="teal lighten-1"
           class="ma-2"
-        >
-          Add
-        </v-btn>
-        <v-btn
-          dark
-          color="teal lighten-1"
-          class="ma-2"
           @click="exportCertificatePEM"
         >
           Export
-        </v-btn>
-        <v-btn
-          dark
-          color="teal lighten-1"
-          class="ma-2"
-        >
-          Replace
         </v-btn>
         <v-btn
           dark
@@ -48,6 +34,7 @@
           dark
           color="teal lighten-1"
           class="ma-2"
+          @click="removeCertificates"
         >
           Delete
         </v-btn>
@@ -298,6 +285,18 @@ export default {
           this.alert = true;
           this.certificatelist = error;
         });
+    },
+    removeCertificates() {
+      this.$axios
+        .post('http://localhost:8091/api/certificate/remove',this.selected)
+        .then((response) => {
+          console.log(response)
+        })
+        .catch((error) => {
+          this.alert = true;
+          console.log(error)
+        });
+      this.getCertificateData();
     },
     exportCertificatePEM() {
       this.$axios

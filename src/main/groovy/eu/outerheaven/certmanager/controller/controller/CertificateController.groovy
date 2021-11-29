@@ -55,15 +55,14 @@ class CertificateController {
         return ResponseEntity.ok("OK")
     }
 
-    @PostMapping("/delete")
+    @PostMapping("/remove")
     ResponseEntity delete(@RequestBody List<CertificateFormGUI> certificateFormGUIS){
-        return ResponseEntity.ok(service.delete(certificateFormGUIS))
+        ResponseEntity.ok(service.delete(certificateFormGUIS))
     }
 
     @GetMapping("/test-generation")
     ResponseEntity testGen(){
-        caVaultService.main()
-        return ResponseEntity.ok("OK")
+        ResponseEntity.ok(caVaultService.main())
     }
 
     @GetMapping("/{certificateId}/export-pem")
@@ -85,8 +84,7 @@ class CertificateController {
 
     @PostMapping("/import")
     ResponseEntity importCert(@RequestBody CertificateImportDto certificateImportDto){
-        service.importCertificate(certificateImportDto)
-        return ResponseEntity.ok("OK")
+        ResponseEntity.ok(service.importCertificate(certificateImportDto))
     }
 
 }

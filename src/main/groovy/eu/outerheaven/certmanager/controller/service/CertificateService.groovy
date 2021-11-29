@@ -214,7 +214,36 @@ class CertificateService {
     }
 
     void delete(List<CertificateFormGUI> certificateFormGUIS){
+        List <Certificate> certificates = new ArrayList<>()
+        certificateFormGUIS.forEach(r->{
+            Certificate certificate = repository.findById(r.id).get()
+            certificates.add(certificate)
+        })
+        certificates.forEach(r->{
+            Keystore keystore = keystoreRepository.findById(r.getKeystoreId()).get()
+            Instance instance = instanceRepository.findById(keystore.getInstanceId()).get()
+            PreparedRequest preparedRequest = new PreparedRequest()
+            RestTemplate restTemplate = new RestTemplate();
+            HttpEntity request = new HttpEntity<>(preparedRequest.getHeader(instance))
 
+            ResponseEntity response = restTemplate.exchange(
+                    instance.getAccessUrl() + api_url + "/" + r.getAgent_id(),
+                    HttpMethod.DELETE,
+                    request,
+                    String.class
+            );
+
+            /*
+            List<Certificate> tmpcerts = keystore.getCertificates()
+            tmpcerts.remove(r)
+            keystore.setCertificates(tmpcerts)
+            keystoreRepository.save(keystore)
+            repository.delete(r)
+            *
+             */
+            LOG.info("Deleted certificate with alias {}, subject DN {} in keystore {} on instance {}", r.getAlias(),r.getX509Certificate().getSubjectDN(),keystore.getLocation(),instance.getName())
+
+        })
     }
 
     CertificateDto toDto(Certificate certificate){
