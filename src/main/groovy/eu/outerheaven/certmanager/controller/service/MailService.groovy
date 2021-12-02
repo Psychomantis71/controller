@@ -35,7 +35,7 @@ class MailService {
 
         String[] setTo = alertEmails.toArray(new String[0])
 
-        helper.setFrom("obama@yourass.com")
+        helper.setFrom("oscm-controller@croz.net")
         helper.setTo(setTo);
 
         helper.setSubject("OSCM Modification Alert");

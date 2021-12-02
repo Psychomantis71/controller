@@ -1,8 +1,10 @@
 package eu.outerheaven.certmanager.controller.controller
 
+import eu.outerheaven.certmanager.controller.dto.CertificateImportDto
 import eu.outerheaven.certmanager.controller.form.CaCertificateForm
 import eu.outerheaven.certmanager.controller.form.NewSignedCertificateForm
 import eu.outerheaven.certmanager.controller.service.CaVaultService
+import org.bouncycastle.asn1.x509.Certificate
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
@@ -57,13 +59,13 @@ class CaCertificateController {
     }
 
     @PostMapping("/import")
-    ResponseEntity importCert(@RequestBody NewSignedCertificateForm newSignedCertificateForm){
-        ResponseEntity.ok(service.createSignedCert(newSignedCertificateForm))
+    ResponseEntity importCert(@RequestBody CertificateImportDto certificateImportDto){
+        ResponseEntity.ok(service.importCertificate(certificateImportDto))
     }
 
-    @PostMapping("/replace")
-    ResponseEntity replace(@RequestBody NewSignedCertificateForm newSignedCertificateForm){
-        ResponseEntity.ok(service.createSignedCert(newSignedCertificateForm))
+    @PostMapping("/{certificateId}/replace")
+    ResponseEntity replace(@RequestBody CertificateImportDto certificateImportDto, @PathVariable Long certificateId){
+        ResponseEntity.ok(service.replaceCertificate(certificateImportDto, certificateId))
     }
 
 }

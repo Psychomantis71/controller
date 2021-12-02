@@ -431,11 +431,21 @@ class CaVaultService {
         if(certificateImportDto.getImportFormat() == "PEM"){
             CertificateLoader certificateLoader = new CertificateLoader()
             certificates = certToCaCert(certificateLoader.decodeImportPem(certificateImportDto.getBase64File(), certificateImportDto.getFilename()))
-
         }else {
             LOG.info("Well fuck seems like the developer hasnt implemented this yet")
         }
+        certificates.forEach(r->{repository.save(r)})
 
+    }
+
+    void replaceCertificate(CertificateImportDto certificateImportDto, Long certId){
+        List<CaCertificate> caCertificates = new ArrayList<>()
+        CertificateLoader certificateLoader = new CertificateLoader()
+        caCertificates = certToCaCert(certificateLoader.decodeImportPem(certificateImportDto.getBase64File(), certificateImportDto.getFilename()))
+        if(caCertificates.size()>1) throw new Exception("Cannot replace one certificate with multiple ones!")
+        CaCertificate caCertificate = repository.findById(certId).get()
+        caCertificate.setX509Certificate(caCertificates.get(0).x509Certificate)
+        repository.save(caCertificate)
     }
 
     private CaCertificate certToCaCert(eu.outerheaven.certmanager.controller.entity.Certificate certificate){

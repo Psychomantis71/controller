@@ -33,7 +33,7 @@ class ControllerApplication {
                 new User(104,"recipient1", passwordEncoder.encode("password"), "adrian.perkovic71@gmail.com", UserRole.RECIPIENT),
                 new User(106,"user1", passwordEncoder.encode("password"), "adrian.perkovic71@gmail.com", UserRole.USER),
                 new User(108,"recipient2", passwordEncoder.encode("password"), "adrian.perkovic71@gmail.com", UserRole.RECIPIENT),
-                new User(110,"user2", passwordEncoder.encode("password"), "adrian.perkovic71@gmail.com", UserRole.USER),
+                new User(110,"user2", passwordEncoder.encode("password"), "aperkovic@croz.net", UserRole.USER),
         ).collect(Collectors.toList());
         repository.saveAll(users);
 
