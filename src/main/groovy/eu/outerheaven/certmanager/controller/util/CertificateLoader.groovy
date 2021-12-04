@@ -287,7 +287,7 @@ class CertificateLoader {
     }
 
     void writeKeyToFileBase64Encoded(PrivateKey privateKey, String fileName) throws Exception {
-        FileOutputStream certificateOut = new FileOutputStream(fileName)
+        FileOutputStream certificateOut = new FileOutputStream(new File(fileName),true)
         String keyData = new String(Base64.getEncoder().encode(privateKey.getEncoded()))
         keyData = keyData.replaceAll("(.{67})", "\$1\n")
         certificateOut.write("\n-----BEGIN PRIVATE KEY-----\n".getBytes())
@@ -355,7 +355,8 @@ class CertificateLoader {
                     Certificate certificate = new Certificate(
                             alias: filename + "_" + i.toString(),
                             privateKey: privateKeys.get(n),
-                            x509Certificate: x509Certificates.get(i)
+                            x509Certificate: x509Certificates.get(i),
+                            managed: false,
                     )
                     certificates.add(certificate)
                     privateKeys.remove(n)
@@ -364,7 +365,8 @@ class CertificateLoader {
             if(certificates.size() < i+1){
                 Certificate certificate = new Certificate(
                         alias: filename + "_" + i.toString(),
-                        x509Certificate: x509Certificates.get(i)
+                        x509Certificate: x509Certificates.get(i),
+                        managed: false,
                 )
                 certificates.add(certificate)
             }
@@ -424,7 +426,8 @@ class CertificateLoader {
                 for(int i=0;i<certificates.size();i++){
                     Certificate certificate = new Certificate(
                             alias: filename + "_" + i.toString(),
-                            x509Certificate: certificates.get(i)
+                            x509Certificate: certificates.get(i),
+                            managed: false,
                     )
                     processedCertificates.add(certificate)
                 }

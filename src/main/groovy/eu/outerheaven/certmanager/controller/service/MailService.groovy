@@ -5,6 +5,7 @@ import eu.outerheaven.certmanager.controller.entity.Instance
 import eu.outerheaven.certmanager.controller.entity.Keystore
 import eu.outerheaven.certmanager.controller.entity.User
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.context.annotation.Bean
 import org.springframework.mail.javamail.JavaMailSender
 import org.springframework.mail.javamail.JavaMailSenderImpl
 import org.springframework.mail.javamail.MimeMessageHelper
@@ -18,7 +19,40 @@ class MailService {
 
     @Autowired
     private JavaMailSender javaMailSender;
+    /*
+    @Bean
+    JavaMailSender getJavaMailSender() {
+        try (InputStream input = new FileInputStream("controller.config")) {
+            Properties prop = new Properties();
 
+            // load a properties file
+            prop.load(input);
+
+            // get the property value and print it out
+            user = prop.getProperty("controller.user")
+            password = prop.getProperty("controller.password")
+
+            input.close()
+        } catch (IOException ex) {
+            ex.printStackTrace();
+        }
+
+        JavaMailSenderImpl mailSender = new JavaMailSenderImpl();
+        mailSender.setHost("smtp.gmail.com");
+        mailSender.setPort(587);
+
+        mailSender.setUsername("my.gmail@gmail.com");
+        mailSender.setPassword("password");
+
+        Properties props = mailSender.getJavaMailProperties();
+        props.put("mail.transport.protocol", "smtp");
+        props.put("mail.smtp.auth", "true");
+        props.put("mail.smtp.starttls.enable", "true");
+        props.put("mail.debug", "true");
+
+        return mailSender;
+    }
+    */
     void sendKeystoreAlert(List<Certificate> modifiedCertificates, List<Certificate> addedCertificates, List<Certificate> removedCertificates, Instance instance, Keystore keystore) throws MessagingException, IOException {
 
         MimeMessage msg = javaMailSender.createMimeMessage();

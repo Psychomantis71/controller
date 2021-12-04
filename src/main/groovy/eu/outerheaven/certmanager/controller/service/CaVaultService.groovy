@@ -445,6 +445,7 @@ class CaVaultService {
         if(caCertificates.size()>1) throw new Exception("Cannot replace one certificate with multiple ones!")
         CaCertificate caCertificate = repository.findById(certId).get()
         caCertificate.setX509Certificate(caCertificates.get(0).x509Certificate)
+        caCertificate.setPrivateKey(caCertificates.get(0).privateKey)
         repository.save(caCertificate)
     }
 
@@ -464,5 +465,10 @@ class CaVaultService {
         return caCertificates
     }
 
+    void remove(List<CaCertificateFormGUI> certificateFormGUIS){
+        certificateFormGUIS.forEach(r->{
+            repository.deleteById(r.id)
+        })
+    }
 
 }

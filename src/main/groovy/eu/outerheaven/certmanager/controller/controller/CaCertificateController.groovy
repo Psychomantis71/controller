@@ -2,6 +2,7 @@ package eu.outerheaven.certmanager.controller.controller
 
 import eu.outerheaven.certmanager.controller.dto.CertificateImportDto
 import eu.outerheaven.certmanager.controller.form.CaCertificateForm
+import eu.outerheaven.certmanager.controller.form.CaCertificateFormGUI
 import eu.outerheaven.certmanager.controller.form.NewSignedCertificateForm
 import eu.outerheaven.certmanager.controller.service.CaVaultService
 import org.bouncycastle.asn1.x509.Certificate
@@ -51,7 +52,7 @@ class CaCertificateController {
 
         try{
             LOG.info("Filename on response is:" + filename)
-            return ResponseEntity.ok().header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"").body(resource)
+            ResponseEntity.ok().header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"").body(resource)
         }catch(Exception exception){
             LOG.error("Error while exporting file: " + exception)
         }
@@ -66,6 +67,11 @@ class CaCertificateController {
     @PostMapping("/{certificateId}/replace")
     ResponseEntity replace(@RequestBody CertificateImportDto certificateImportDto, @PathVariable Long certificateId){
         ResponseEntity.ok(service.replaceCertificate(certificateImportDto, certificateId))
+    }
+
+    @PostMapping("/remove")
+    ResponseEntity remove(@RequestBody List<CaCertificateFormGUI> certificateFormGUIS){
+        ResponseEntity.ok(service.remove(certificateFormGUIS))
     }
 
 }

@@ -15,32 +15,157 @@
         >
           Force refresh
         </v-btn>
-        <v-btn
-          dark
-          color="teal lighten-1"
-          class="ma-2"
+
+        <v-dialog
+          v-model="dialogImportCert"
+          max-width="1000px"
         >
-          Add
-        </v-btn>
+          <template v-slot:activator="{ on, attrs }">
+            <v-btn
+              dark
+              color="teal lighten-1"
+              class="ma-2"
+              v-bind="attrs"
+              v-on="on"
+            >
+              Import certificates
+            </v-btn>
+          </template>
+          <v-card>
+            <v-card-title>
+              <span class="text-h5">Import certificate</span>
+            </v-card-title>
+
+            <v-card-text>
+              <v-container>
+                <v-row>
+                  <v-col
+                    cols="12"
+                    sm="6"
+                    md="6"
+                  >
+                    <v-select
+                      v-model="importItem.importFormat"
+                      :items="importOptions"
+                      label="Select import format"
+                      item-value="choiceValue"
+                      item-text="choiceName"
+                    ></v-select>
+                  </v-col>
+                  <v-col
+                    cols="12"
+                    sm="6"
+                    md="6"
+                  >
+                    <v-text-field
+                      v-model="importItem.password"
+                      v-if="importItem.importFormat === 'PKCS12'"
+                      :append-icon="show1 ? 'mdi-eye' : 'mdi-eye-off'"
+                      :rules="[rules.required]"
+                      :type="show1 ? 'text' : 'password'"
+                      name="passwordInput"
+                      label="Password"
+                      hint="If selecting multiple instances assure that the password is the same"
+                      value=""
+                      class="input-group--focused"
+                      @click:append="show1 = !show1"
+                    />
+                  </v-col>
+                </v-row>
+                <v-row>
+                  <v-file-input
+                    v-model="fileToUpload"
+                    label="File input"
+                  ></v-file-input>
+                </v-row>
+              </v-container>
+            </v-card-text>
+
+            <v-card-actions>
+              <v-spacer />
+              <v-btn
+                color="blue darken-1"
+                text
+                @click="closeImportCert"
+              >
+                Cancel
+              </v-btn>
+              <v-btn
+                color="blue darken-1"
+                text
+                @click="saveImportCert"
+              >
+                Save
+              </v-btn>
+            </v-card-actions>
+          </v-card>
+        </v-dialog>
+
         <v-btn
           dark
           color="teal lighten-1"
           class="ma-2"
+          @click="sizeOfSelectedReplace"
         >
           Replace
         </v-btn>
+
+
+        <v-dialog
+          v-model="dialogReplace"
+          max-width="1000px"
+        >
+          <v-card>
+            <v-card-title>
+              <span class="text-h5">Replace certificate</span>
+            </v-card-title>
+
+            <v-card-text>
+              <v-container>
+                <v-row>
+                  <p> By replacing a certificate you are keeping the dependency chain/any managed certificates will still renew from this certificate </p>
+                </v-row>
+                <v-row>
+                  <v-file-input
+                    v-model="fileToUpload"
+                    label="PEM input file"
+                  ></v-file-input>
+                </v-row>
+              </v-container>
+            </v-card-text>
+
+            <v-card-actions>
+              <v-spacer />
+              <v-btn
+                color="blue darken-1"
+                text
+                @click="closeReplaceCert"
+              >
+                Cancel
+              </v-btn>
+              <v-btn
+                color="blue darken-1"
+                text
+                @click="saveReplaceCert"
+              >
+                Save
+              </v-btn>
+            </v-card-actions>
+          </v-card>
+        </v-dialog>
         <v-btn
           dark
           color="teal lighten-1"
           class="ma-2"
+          @click="sizeOfSelectedExport"
         >
-          Delete
+          Export
         </v-btn>
         <v-btn
           dark
           color="teal lighten-1"
           class="ma-2"
-          @click="sizeOfSelected"
+          @click="sizeOfSelectedSigned"
         >
           Create signed certificate
         </v-btn>
@@ -262,6 +387,16 @@
             </v-card-text>
           </v-card>
         </v-dialog>
+
+        <v-btn
+          dark
+          color="teal lighten-1"
+          class="ma-2"
+          @click="removeCert"
+        >
+          Delete
+        </v-btn>
+
         <v-card>
           <v-card-title>
             <v-text-field
@@ -680,7 +815,7 @@
           v-model="snackbar"
           :timeout="timeout"
         >
-          You need to select one signing certificate
+          You need to select one certificate
           <template v-slot:action="{ attrs }">
             <v-btn
               color="red"
@@ -712,6 +847,22 @@
 export default {
   data() {
     return {
+      fileToUpload:null,
+      dialogImportCert:false,
+      show1: false,
+      importItem: {
+        password: '',
+        importFormat: '',
+        filename:'',
+        base64File:'',
+      },
+      importOptions:[ { choiceName: 'PEM certificate', choiceValue: 'PEM' },
+        { choiceName: 'PKCS12', choiceValue: 'PKCS12' },
+      ],
+      rules: {
+        required: (value) => !!value || 'Required.',
+      },
+      dialogReplace:false,
       e1: 1,
       snackbar: false,
       timeout: 4000,
@@ -791,14 +942,27 @@ export default {
           this.certificatelist = error;
         });
     },
-    sizeOfSelected(){
+    //This is horrible i know, will fix it when i figure out how to do it properly
+    sizeOfSelectedSigned(){
       if( this.selected.length !== 1 ){
         this.snackbar = true
       }else{
         this.dialogSigned=true
       }
-
-
+    },
+    sizeOfSelectedExport(){
+      if( this.selected.length !== 1 ){
+        this.snackbar = true
+      }else{
+        this.exportCertificatePEM()
+      }
+    },
+    sizeOfSelectedReplace(){
+      if( this.selected.length !== 1 ){
+        this.snackbar = true
+      }else{
+        this.dialogReplace = true;
+      }
     },
     postNewCa() {
       this.$axios
@@ -833,6 +997,28 @@ export default {
       console.log('New signed cert data:', this.newSignedCert)
       this.close()
     },
+    exportCertificatePEM() {
+      this.$axios
+        .get(`http://localhost:8091/api/cavault/${this.selected[0].id}/export-pem`)
+        .then((response) => {
+          let filetodownload = response.headers['content-disposition'].split('filename=')[1].split(';')[0];
+          filetodownload = filetodownload.substring(1, filetodownload.length-1)
+          console.log(filetodownload);
+          var fileURL = window.URL.createObjectURL(new Blob([response.data]));
+          var fileLink = document.createElement('a');
+
+          fileLink.href = fileURL;
+          fileLink.setAttribute('download', filetodownload);
+          document.body.appendChild(fileLink);
+
+          fileLink.click();
+
+        })
+        .catch((error) => {
+          this.alert = true;
+          console.log(error)
+        });
+    },
     getStatusColor(status) {
       if (status === 'VALID') return 'green';
       if (status === 'EXPIRING SOON') return 'orange';
@@ -854,6 +1040,81 @@ export default {
     closeSigned() {
       this.dialogSigned = false;
       this.e1=1
+    },
+    getBase64(file){
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => {
+          let encoded = reader.result.toString().replace(/^data:(.*,)?/, '');
+          if ((encoded.length % 4) > 0) {
+            encoded += '='.repeat(4 - (encoded.length % 4));
+          }
+          resolve(encoded);
+        };
+        reader.onerror = error => reject(error);
+      });
+    },
+    uploadFile(){
+      this.getBase64(this.fileToUpload).then(
+        data => {
+          this.importItem.base64File=data
+          this.importItem.filename=this.fileToUpload.name
+          console.log(this.importItem)
+          this.$axios
+            .post('http://localhost:8091/api/cavault/import', this.importItem)
+            .then((response) => {
+              console.log('Post response: ', response.data);
+            })
+            .catch((error) => {
+              this.alert = true;
+              console.log(error);
+            });
+        }
+      );
+    },
+    uploadFileReplace(){
+      this.getBase64(this.fileToUpload).then(
+        data => {
+          this.importItem.base64File=data
+          this.importItem.filename=this.fileToUpload.name
+          console.log(this.importItem)
+          this.$axios
+            .post(`http://localhost:8091/api/cavault/${this.selected[0].id}/replace`, this.importItem)
+            .then((response) => {
+              console.log('Post response: ', response.data);
+            })
+            .catch((error) => {
+              this.alert = true;
+              console.log(error);
+            });
+        }
+      );
+    },
+    removeCert() {
+      this.$axios
+        .post('http://localhost:8091/api/cavault/remove', this.selected)
+        .then((response) => {
+          console.log('Post response: ', response.data);
+        })
+        .catch((error) => {
+          this.alert = true;
+          console.log('Error deleting certificates: ',error);
+        });
+    },
+    saveImportCert() {
+      this.uploadFile();
+      this.closeImportCert();
+    },
+    closeImportCert() {
+      this.dialogImportCert = false;
+    },
+    saveReplaceCert() {
+      this.uploadFileReplace();
+      this.closeReplaceCert();
+    },
+    closeReplaceCert() {
+      this.dialogReplace = false;
     },
   },
 };

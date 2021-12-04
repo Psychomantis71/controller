@@ -231,7 +231,10 @@ class KeystoreService {
         targetKeystore.setCertificates(certificates)
         */
         repository.save(targetKeystore)
-        mailService.sendKeystoreAlert(modifiedCertificates, addedCertificates, removedCertificates,instance,targetKeystore)
+        boolean mailAlert = false
+        if(mailAlert){
+            mailService.sendKeystoreAlert(modifiedCertificates, addedCertificates, removedCertificates,instance,targetKeystore)
+        }
         removedCertificates.forEach(z->{
             LOG.info("Certificate with alias {} and ID {} has been removed",z.alias, z.id)
             //certificateRepository.deleteById(z.getId())
