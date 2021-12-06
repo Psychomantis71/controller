@@ -104,6 +104,51 @@
           </v-card>
         </v-dialog>
 
+        <v-dialog
+          v-model="uploadDialog"
+          max-width="800px"
+        >
+          <v-card>
+            <v-card-title>
+              <span class="text-h5">Upload file</span>
+            </v-card-title>
+
+            <v-card-text>
+              <v-container>
+                <v-row>
+                  <v-col
+                    cols="12"
+                    sm="6"
+                    md="4"
+                  >
+                    <v-file-input
+                      v-model="fileToUpload"
+                      label="File input"
+                    ></v-file-input>
+                  </v-col>
+                </v-row>
+              </v-container>
+            </v-card-text>
+
+            <v-card-actions>
+              <v-spacer />
+              <v-btn
+                color="blue darken-1"
+                text
+                @click="closeUpload"
+              >
+                Cancel
+              </v-btn>
+              <v-btn
+                color="blue darken-1"
+                text
+                @click="uploadSubmit"
+              >
+                Upload
+              </v-btn>
+            </v-card-actions>
+          </v-card>
+        </v-dialog>
 
         <v-btn
           dark
@@ -124,8 +169,9 @@
           dark
           color="teal lighten-1"
           class="ma-2"
+          @click="showUploadDialog"
         >
-          Submit to payload location
+          Upload to payload location
         </v-btn>
         <v-card>
           <v-card-title>
@@ -148,18 +194,6 @@
           >
           </v-data-table>
         </v-card>
-        <v-file-input
-          v-model="fileToUpload"
-          label="File input"
-        ></v-file-input>
-        <v-btn
-          dark
-          color="teal lighten-1"
-          class="ma-2"
-          @click="uploadFilev2"
-        >
-          Upload file
-        </v-btn>
       </v-flex>
     </v-layout>
   </v-container>
@@ -170,6 +204,7 @@ export default {
   data() {
     return {
       dialog: false,
+      uploadDialog: false,
       keystorePath: '',
       dialogDelete: false,
       editedIndex: -1,
@@ -298,6 +333,16 @@ export default {
         this.editedItem = { ...this.defaultItem };
         this.editedIndex = -1;
       });
+    },
+    closeUpload() {
+      this.uploadDialog = false;
+    },
+    uploadSubmit(){
+      this.uploadFilev2()
+      this.uploadDialog=false;
+    },
+    showUploadDialog(){
+      this.uploadDialog=true
     },
     uploadFile(){
 

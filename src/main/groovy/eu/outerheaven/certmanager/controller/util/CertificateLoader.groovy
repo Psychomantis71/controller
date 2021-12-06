@@ -2,8 +2,6 @@ package eu.outerheaven.certmanager.controller.util
 
 import com.ibm.security.cmskeystore.CMSProvider
 import eu.outerheaven.certmanager.controller.entity.Keystore
-import javafx.scene.chart.ScatterChart
-import org.apache.tomcat.util.http.fileupload.FileUtils
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.bouncycastle.openssl.PEMParser
 import org.slf4j.Logger
