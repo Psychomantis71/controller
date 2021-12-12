@@ -6,19 +6,20 @@ import eu.outerheaven.certmanager.controller.entity.Certificate
 import eu.outerheaven.certmanager.controller.entity.Instance
 import eu.outerheaven.certmanager.controller.entity.Keystore
 import eu.outerheaven.certmanager.controller.entity.User
-import eu.outerheaven.certmanager.controller.form.InstanceForm
 import eu.outerheaven.certmanager.controller.form.KeystoreForm
 import eu.outerheaven.certmanager.controller.form.KeystoreFormGUI
+import eu.outerheaven.certmanager.controller.form.PayloadLocationForm
+import eu.outerheaven.certmanager.controller.form.RetrieveFromPortForm
 import eu.outerheaven.certmanager.controller.repository.CertificateRepository
 import eu.outerheaven.certmanager.controller.repository.InstanceRepository
 import eu.outerheaven.certmanager.controller.repository.KeystoreRepository
 import eu.outerheaven.certmanager.controller.repository.UserRepository
 import eu.outerheaven.certmanager.controller.util.CertificateLoader
 import eu.outerheaven.certmanager.controller.util.PreparedRequest
-import eu.outerheaven.certmanager.controller.util.deserializers.X509CertificateDeserializer
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.core.ParameterizedTypeReference
 import org.springframework.http.HttpEntity
 import org.springframework.http.HttpMethod
 import org.springframework.http.ResponseEntity
@@ -275,6 +276,28 @@ class KeystoreService {
         );
         LOG.debug("Delete from agent returns: " + response.statusCode)
 
+    }
+
+    //TODO feature
+    void retrieveFromAgent(RetrieveFromPortForm retrieveFromPortForm){
+        try{
+            Instance instance = instanceRepository.findById(retrieveFromPortForm.instanceId).get()
+            PreparedRequest preparedRequest = new PreparedRequest()
+            RestTemplate restTemplate = new RestTemplate();
+            HttpEntity<RetrieveFromPortForm> request = new HttpEntity<>(retrieveFromPortForm, preparedRequest.getHeader(instance))
+
+            ResponseEntity<List<CertificateDto>> response = restTemplate.exchange(
+                    instance.getAccessUrl() + api_url + "/retrieve-port",
+                    HttpMethod.POST,
+                    request,
+                    new ParameterizedTypeReference<List<CertificateDto>>(){}
+            )
+            List<CertificateDto> responseForms = response.getBody()
+            LOG.info("Agent with ip {}, hostname {} and port {} has added a new keystore!",instance.getIp(),instance.getHostname(),instance.getPort())
+
+        } catch(Exception e){
+            LOG.error("Adding keystore to agent failed with error " + e )
+        }
     }
 
 }

@@ -28,7 +28,7 @@ const router = new Router({
     },
     {
       path: '/secured',
-      name: 'Secured',
+      name: 'User data',
       component: Secured,
     },
     {

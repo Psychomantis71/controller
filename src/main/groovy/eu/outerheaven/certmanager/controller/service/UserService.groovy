@@ -45,6 +45,35 @@ class UserService {
         userForms.forEach(r->repository.deleteById(r.getId()))
     }
 
+    void changePassword(Long userId, User requester, UserForm userForm){
+        User user = repository.findById(userId).get()
+        if(user != requester || requester.userRole != UserRole.ADMIN){
+            LOG.error("A user tried to change a password of another user, yet it isnt his own password and the user is not a administrator")
+            throw new Exception("Denied password change")
+        }else{
+            user.setPassword(passwordEncoder.encode(userForm.password))
+            repository.save(user)
+            LOG.info("User {} just changed the password of the user {}",requester.userName,user.userName)
+        }
+    }
+
+
+    void changeEmail(Long userId, User requester, UserForm userForm){
+        User user = repository.findById(userId).get()
+        if(user != requester || requester.userRole != UserRole.ADMIN){
+            LOG.error("A user tried to change a email of another user, yet it isnt his own email and the user is not a administrator")
+            throw new Exception("Denied email change")
+        }else{
+            user.setEmail(userForm.email)
+            repository.save(user)
+            LOG.info("User {} just changed the email of the user {}",requester.userName,user.userName)
+        }
+    }
+
+    UserForm getUserData(User user){
+        UserForm userForm = toForm(user)
+        return userForm
+    }
 
     User toClass(UserForm userForm){
         User user

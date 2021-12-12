@@ -112,7 +112,7 @@ export default {
       if (this.isAuthenticated) {
         return [
           { title: 'Home', path: '/home', icon: 'home' },
-          { title: 'Secured page', path: '/secured', icon: 'vpn_key' },
+          { title: 'User data', path: '/secured', icon: 'vpn_key' },
         ];
       }
       return [

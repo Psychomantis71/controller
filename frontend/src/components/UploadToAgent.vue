@@ -194,6 +194,22 @@
           >
           </v-data-table>
         </v-card>
+        <v-snackbar
+          v-model="snackbar"
+          :timeout="timeout"
+        >
+          You need to select at least one payload location
+          <template v-slot:action="{ attrs }">
+            <v-btn
+              color="red"
+              text
+              v-bind="attrs"
+              @click="snackbar = false"
+            >
+              Close
+            </v-btn>
+          </template>
+        </v-snackbar>
       </v-flex>
     </v-layout>
   </v-container>
@@ -203,6 +219,8 @@
 export default {
   data() {
     return {
+      snackbar: false,
+      timeout: 4000,
       dialog: false,
       uploadDialog: false,
       keystorePath: '',
@@ -342,7 +360,12 @@ export default {
       this.uploadDialog=false;
     },
     showUploadDialog(){
-      this.uploadDialog=true
+      if( this.selected.length < 1 ){
+        this.snackbar = true
+      }else{
+        this.uploadDialog=true
+      }
+
     },
     uploadFile(){
 

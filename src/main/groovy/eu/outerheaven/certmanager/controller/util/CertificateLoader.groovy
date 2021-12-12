@@ -88,7 +88,7 @@ class CertificateLoader {
      * @throws CertificateEncodingException error
      */
     //UPDATED
-    static List<Certificate> loadCertificatesFromHost(String host, int port) throws KeyManagementException,
+    List<Certificate> loadCertificatesFromHost(String host, int port) throws KeyManagementException,
             NoSuchAlgorithmException, IOException, CertificateException, CertificateEncodingException {
         SSLSocket socket = null
         try {
