@@ -177,11 +177,12 @@ class CertificateService {
 
     void importCertificate(CertificateImportDto certificateImportDto){
         List<Certificate> certificates
+        CertificateLoader certificateLoader = new CertificateLoader()
         if(certificateImportDto.getImportFormat() == "PEM"){
-            CertificateLoader certificateLoader = new CertificateLoader()
             certificates = certificateLoader.decodeImportPem(certificateImportDto.getBase64File(), certificateImportDto.getFilename())
         }else {
-            LOG.info("Well fuck seems like the developer hasnt implemented this yet")
+            certificates = certificateLoader.decodeImportPCKS12(certificateImportDto.getBase64File(), certificateImportDto.getPassword())
+            //LOG.info("Well fuck seems like the developer hasnt implemented this yet")
         }
         propCertToAgents(certificates,certificateImportDto.getSelectedKeystores())
 
@@ -267,5 +268,7 @@ class CertificateService {
         })
         return certificateDtos
     }
+
+
 
 }

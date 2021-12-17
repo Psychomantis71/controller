@@ -428,11 +428,12 @@ class CaVaultService {
 
     void importCertificate(CertificateImportDto certificateImportDto){
         List<CaCertificate> certificates
+        CertificateLoader certificateLoader = new CertificateLoader()
         if(certificateImportDto.getImportFormat() == "PEM"){
-            CertificateLoader certificateLoader = new CertificateLoader()
             certificates = certToCaCert(certificateLoader.decodeImportPem(certificateImportDto.getBase64File(), certificateImportDto.getFilename()))
         }else {
-            LOG.info("Well fuck seems like the developer hasnt implemented this yet")
+            certificates = certToCaCert(certificateLoader.decodeImportPCKS12(certificateImportDto.getBase64File(), certificateImportDto.getPassword()))
+            //LOG.info("Well fuck seems like the developer hasnt implemented this yet")
         }
         certificates.forEach(r->{repository.save(r)})
 

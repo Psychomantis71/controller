@@ -19,10 +19,13 @@ import eu.outerheaven.certmanager.controller.util.PreparedRequest
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.core.ParameterizedTypeReference
+import org.springframework.core.env.Environment
 import org.springframework.http.HttpEntity
 import org.springframework.http.HttpMethod
 import org.springframework.http.ResponseEntity
+import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
 import org.springframework.web.client.RestTemplate
 
@@ -48,6 +51,11 @@ class KeystoreService {
 
     @Autowired
     private final MailService mailService
+
+    @Autowired
+    private Environment environment
+
+    String expirationCheck = environment.getProperty("controller.mail.expiration.check")
 
     ArrayList<KeystoreForm> getAll(){
         ArrayList<Keystore> all = repository.findAll() as ArrayList<Keystore>
@@ -137,7 +145,6 @@ class KeystoreService {
         keystoreForms.forEach(r ->keystores.add(toClass(r)))
         return keystores
     }
-
 
     void add(ArrayList<KeystoreForm> keystoreForms){
         keystoreForms.forEach(r ->{
@@ -233,6 +240,9 @@ class KeystoreService {
         */
         repository.save(targetKeystore)
         boolean mailAlert = false
+        if (environment.getProperty("controller.mail.alert").toBoolean() && environment.getProperty("controller.mail.modification.alert").toBoolean()){
+            mailAlert= true
+        }
         if(mailAlert){
             mailService.sendKeystoreAlert(modifiedCertificates, addedCertificates, removedCertificates,instance,targetKeystore)
         }
@@ -298,6 +308,12 @@ class KeystoreService {
         } catch(Exception e){
             LOG.error("Adding keystore to agent failed with error " + e )
         }
+    }
+
+    @Scheduled(cron = "${controller.mail.expiration.check}" )
+    void scheduledCheck(){
+        List<Instance> instances = instanceRepository.findAll() as List<Instance>
+
     }
 
 }

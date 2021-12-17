@@ -1,6 +1,7 @@
 package eu.outerheaven.certmanager.controller.util
 
 import com.ibm.security.cmskeystore.CMSProvider
+import com.sun.xml.internal.messaging.saaj.util.ByteInputStream
 import eu.outerheaven.certmanager.controller.entity.Keystore
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.bouncycastle.openssl.PEMParser
@@ -148,7 +149,6 @@ class CertificateLoader {
                 }
 
                 keystore.load(new FileInputStream(uri), password.toCharArray())
-                keystore.setCertificateEntry()
                 LOG.debug("Reading aliases from keystore")
                 Enumeration<String> aliases = keystore.aliases()
                 while (aliases.hasMoreElements()) {
@@ -436,6 +436,52 @@ class CertificateLoader {
         }catch(Exception exception){
             LOG.error("Well fuck, something failed with the import: " + exception)
         }
+    }
+
+    List<Certificate> decodeImportPCKS12(String input, String password) throws KeyStoreException, IOException, CertificateException, NoSuchAlgorithmException{
+        byte [] data = Base64.getDecoder().decode(input.getBytes(StandardCharsets.UTF_8))
+        String[] types = new String[]{"JKS", "JCEKS", "PKCS12", "IBMCMSKS",/*BC types*/ "BKS", "PKCS12", "UBER"}
+        boolean read = false
+        List<Certificate> certificates = new ArrayList<>()
+        Security.addProvider(new BouncyCastleProvider())
+        Security.addProvider(new CMSProvider())
+        for (int i = 0; i < types.length; ++i) {
+            try {
+                KeyStore keystore
+                if (i >= 4) { //BC
+                    keystore = KeyStore.getInstance(types[i], "BC")
+                } else { //SUN AND IBM
+                    keystore = KeyStore.getInstance(types[i])
+                }
+
+                keystore.load(new ByteArrayInputStream(data), password.toCharArray())
+                LOG.debug("Reading aliases from keystore")
+                Enumeration<String> aliases = keystore.aliases()
+                while (aliases.hasMoreElements()) {
+                    Certificate certificate = new Certificate()
+                    String alias = aliases.nextElement()
+                    if(keystore.getKey(alias,password.toCharArray()) != null){
+                        certificate.setPrivateKey(keystore.getKey(alias,password.toCharArray()) as PrivateKey)
+                        LOG.info("Certificate with alias {} has a private key attached to it!",alias)
+                    }
+                    certificate.setAlias(alias)
+                    certificate.setX509Certificate(keystore.getCertificate(alias) as X509Certificate)
+                    certificate.setManaged(false)
+                    certificates.add(certificate)
+                    //certificates.add((X509Certificate) keystore.getCertificate(alias))
+                    LOG.debug("Read certificate with alias: " + alias)
+                }
+                read = true
+                break
+            } catch (Exception e) {
+                LOG.error("Reading keystore with type " + types[i] + " : " + e.toString())
+            }
+
+        }
+        if (!read) {
+            throw new RuntimeException("Could not read imported keystore: ")
+        }
+        return certificates
     }
 
 }

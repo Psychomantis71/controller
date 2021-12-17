@@ -4,6 +4,7 @@ import eu.outerheaven.certmanager.controller.entity.Certificate
 import eu.outerheaven.certmanager.controller.entity.Instance
 import eu.outerheaven.certmanager.controller.entity.Keystore
 import eu.outerheaven.certmanager.controller.entity.User
+import eu.outerheaven.certmanager.controller.repository.KeystoreRepository
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.annotation.Bean
 import org.springframework.mail.javamail.JavaMailSender
@@ -19,6 +20,10 @@ class MailService {
 
     @Autowired
     private JavaMailSender javaMailSender;
+
+    @Autowired
+    private KeystoreRepository keystoreRepository
+
     /*
     @Bean
     JavaMailSender getJavaMailSender() {
@@ -110,5 +115,40 @@ class MailService {
 
     }
 
+    void sendKeystoreCertificateExpirationAlert(List<Certificate> certificates, Instance instance) throws MessagingException, IOException{
+
+
+        MimeMessage msg = javaMailSender.createMimeMessage();
+
+        // true = multipart message
+        MimeMessageHelper helper = new MimeMessageHelper(msg, true);
+
+        List<String> alertEmails = new ArrayList<>()
+        List<User> users = instance.getAssignedUsers()
+
+        users.forEach(r->{
+            alertEmails.add(r.getEmail())
+        })
+
+        String[] setTo = alertEmails.toArray(new String[0])
+
+        helper.setFrom("oscm-controller@croz.net")
+        helper.setTo(setTo);
+
+        helper.setSubject("OSCM Expiration Alert");
+        String text
+        text = "<h1>OSCM has detected certificates that will expire soon</h1>"
+        text = text + "<p> Affected instance name ${instance.getName()} and IP ${instance.getIp()} </p>"
+        text = text + "<h2 style=\"color:red;\">Expiring certificates: </h2>"
+        certificates.forEach(r->{
+            Keystore keystore = keystoreRepository.findById(r.getKeystoreId()).get()
+            text = text + "<p>Certificate with ID ${r.getId()} alias ${r.getAlias()}, subject ${r.getX509Certificate().getSubjectDN()} has been will expire on ${r.getX509Certificate().getNotAfter()}, located under keystore ID ${keystore.getId()} and path ${keystore.getLocation()} </p>"
+        })
+
+        helper.setText(text,true)
+
+        javaMailSender.send(msg);
+
+    }
 
 }

@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.SpringApplication
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan
+import org.springframework.scheduling.annotation.EnableScheduling
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
 
 import javax.annotation.PostConstruct
@@ -17,6 +18,7 @@ import java.util.stream.Stream
 
 @ConfigurationPropertiesScan
 @SpringBootApplication
+@EnableScheduling
 class ControllerApplication {
     private static final Logger LOG = LoggerFactory.getLogger(ControllerApplication)
     private static BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder()
@@ -38,7 +40,7 @@ class ControllerApplication {
         repository.saveAll(users);
 
 
-        LOG.info("Found users: " + repository.count() )
+        LOG.debug("Found users on startup: " + repository.count() )
     }
 
     static void main(String[] args) {
