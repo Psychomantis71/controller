@@ -20,17 +20,28 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
+import org.springframework.boot.autoconfigure.EnableAutoConfiguration
 import org.springframework.core.ParameterizedTypeReference
 import org.springframework.core.env.Environment
 import org.springframework.http.HttpEntity
 import org.springframework.http.HttpMethod
 import org.springframework.http.ResponseEntity
 import org.springframework.scheduling.annotation.Scheduled
+import org.springframework.scheduling.support.CronExpression
+import org.springframework.stereotype.Component
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 import org.springframework.web.client.RestTemplate
+
+import java.security.cert.CertificateExpiredException
+import java.security.cert.CertificateNotYetValidException
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.util.concurrent.TimeUnit
 
 
 @Service
+@Component
 class KeystoreService {
 
     private static final Logger LOG = LoggerFactory.getLogger(KeystoreService.class)
@@ -54,8 +65,6 @@ class KeystoreService {
 
     @Autowired
     private Environment environment
-
-    String expirationCheck = environment.getProperty("controller.mail.expiration.check")
 
     ArrayList<KeystoreForm> getAll(){
         ArrayList<Keystore> all = repository.findAll() as ArrayList<Keystore>
@@ -304,16 +313,67 @@ class KeystoreService {
             )
             List<CertificateDto> responseForms = response.getBody()
             LOG.info("Agent with ip {}, hostname {} and port {} has added a new keystore!",instance.getIp(),instance.getHostname(),instance.getPort())
-
         } catch(Exception e){
             LOG.error("Adding keystore to agent failed with error " + e )
         }
+
     }
 
-    @Scheduled(cron = "${controller.mail.expiration.check}" )
-    void scheduledCheck(){
-        List<Instance> instances = instanceRepository.findAll() as List<Instance>
 
+
+    //@Scheduled(cron = "${controller.mail.expiration.check}")
+
+    @Transactional
+    void scheduledCheck(){
+        if(environment.getProperty("controller.mail.expiration.alert").toBoolean()){
+            LOG.info("Starting scheduled job: expiration check");
+            Date date = new Date()
+            Calendar calendar = Calendar.getInstance();
+            //TODO REPLACE THIS WITH CONFIG VARIABLE
+            calendar.add(Calendar.DATE, 1);
+            Date currentDatePlus= calendar.getTime();
+
+            List<Instance> instances = instanceRepository.findAll()
+            for(int i=0;i<instances.size();i++){
+                List<Certificate> expiredCertificates = new ArrayList<>()
+                List<Certificate> soonToExpireCertificates = new ArrayList<>()
+                List<Keystore> keystores = repository.findByInstanceId(instances.get(i).getId())
+                keystores.forEach(k ->{
+                    List<Certificate> keystoreCertificates = certificateRepository.findByKeystoreId(k.getId())
+                    for(int c=0;c<keystoreCertificates.size();c++){
+                        boolean alreadyExpired=false
+                        try{
+                            keystoreCertificates.get(c).getX509Certificate().checkValidity(date)
+                        }catch(CertificateExpiredException exception){
+                            expiredCertificates.add(keystoreCertificates.get(c))
+                            alreadyExpired=true
+                            LOG.warn("Certificate with alias {} has already expired!", keystoreCertificates.get(c).getAlias())
+                            LOG.debug("Exception: ", exception)
+                        }catch(CertificateNotYetValidException exception){
+                            LOG.debug("Exception: ", exception)
+                        }
+                        if(!alreadyExpired){
+                            try{
+                                keystoreCertificates.get(c).getX509Certificate().checkValidity(currentDatePlus)
+                            }catch(CertificateExpiredException exception){
+                                soonToExpireCertificates.add(keystoreCertificates.get(c))
+                                LOG.warn("Certificate with alias {} is within expiration warning period!", keystoreCertificates.get(c).getAlias())
+                                LOG.debug("Exception: ", exception)
+                            }catch(CertificateNotYetValidException exception){
+                                LOG.info("Certificate with alias {} is not yet valid!", keystoreCertificates.get(c).getAlias())
+                                LOG.debug("Exception: ", exception)
+                            }
+                        }
+
+                    }
+                })
+                if(soonToExpireCertificates.size()>0 || expiredCertificates.size()>0){
+                    mailService.sendKeystoreCertificateExpirationAlert(expiredCertificates, soonToExpireCertificates, instances.get(i))
+                }
+            }
+
+        }
+        LOG.info("Ended scheduled job: expiration check");
     }
 
 }

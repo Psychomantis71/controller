@@ -5,6 +5,8 @@ import eu.outerheaven.certmanager.controller.entity.Instance
 import eu.outerheaven.certmanager.controller.entity.Keystore
 import eu.outerheaven.certmanager.controller.entity.User
 import eu.outerheaven.certmanager.controller.repository.KeystoreRepository
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.annotation.Bean
 import org.springframework.mail.javamail.JavaMailSender
@@ -23,6 +25,8 @@ class MailService {
 
     @Autowired
     private KeystoreRepository keystoreRepository
+
+    private static final Logger LOG = LoggerFactory.getLogger(MailService.class)
 
     /*
     @Bean
@@ -112,10 +116,10 @@ class MailService {
         helper.setText(text,true)
 
         javaMailSender.send(msg);
-
+        LOG.info("Modification alert email has been sent")
     }
 
-    void sendKeystoreCertificateExpirationAlert(List<Certificate> certificates, Instance instance) throws MessagingException, IOException{
+    void sendKeystoreCertificateExpirationAlert(List<Certificate> expiredCertificates, List<Certificate> soonToExpireCertificates, Instance instance) throws MessagingException, IOException{
 
 
         MimeMessage msg = javaMailSender.createMimeMessage();
@@ -137,17 +141,28 @@ class MailService {
 
         helper.setSubject("OSCM Expiration Alert");
         String text
-        text = "<h1>OSCM has detected certificates that will expire soon</h1>"
+        text = "<h1>OSCM has detected certificates that have either expired or are within the expiration warning period</h1>"
         text = text + "<p> Affected instance name ${instance.getName()} and IP ${instance.getIp()} </p>"
-        text = text + "<h2 style=\"color:red;\">Expiring certificates: </h2>"
-        certificates.forEach(r->{
-            Keystore keystore = keystoreRepository.findById(r.getKeystoreId()).get()
-            text = text + "<p>Certificate with ID ${r.getId()} alias ${r.getAlias()}, subject ${r.getX509Certificate().getSubjectDN()} has been will expire on ${r.getX509Certificate().getNotAfter()}, located under keystore ID ${keystore.getId()} and path ${keystore.getLocation()} </p>"
-        })
+        if(expiredCertificates.size()>0){
+            text = text + "<h2 style=\"color:red;\">Already expired certificates: </h2>"
+            expiredCertificates.forEach(r->{
+                Keystore keystore = keystoreRepository.findById(r.getKeystoreId()).get()
+                text = text + "<p>Certificate with ID ${r.getId()} alias ${r.getAlias()}, subject ${r.getX509Certificate().getSubjectDN()} has already expired on ${r.getX509Certificate().getNotAfter()}, located under keystore ID ${keystore.getId()} and path ${keystore.getLocation()} </p>"
+            })
+        }
+        if(soonToExpireCertificates.size()>0){
+            text = text + "<h2 style=\"color:red;\">Certificates within expiration warning period: </h2>"
+            soonToExpireCertificates.forEach(r->{
+                Keystore keystore = keystoreRepository.findById(r.getKeystoreId()).get()
+                text = text + "<p>Certificate with ID ${r.getId()} alias ${r.getAlias()}, subject ${r.getX509Certificate().getSubjectDN()} will expire on ${r.getX509Certificate().getNotAfter()}, located under keystore ID ${keystore.getId()} and path ${keystore.getLocation()} </p>"
+            })
+        }
+
 
         helper.setText(text,true)
 
         javaMailSender.send(msg);
+        LOG.info("Expiration alert email has been sent")
 
     }
 

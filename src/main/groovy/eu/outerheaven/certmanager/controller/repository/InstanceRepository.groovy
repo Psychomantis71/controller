@@ -18,4 +18,6 @@ interface InstanceRepository  extends CrudRepository<Instance, Long> {
 
     Instance findByUser(User user)
 
+    List<Instance> findAll()
+
 }

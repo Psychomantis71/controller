@@ -5,4 +5,6 @@ import org.springframework.data.repository.CrudRepository
 
 interface CertificateRepository extends CrudRepository<Certificate, Long>{
 
+    List<Certificate> findByKeystoreId(Long keystoreId)
+
 }
