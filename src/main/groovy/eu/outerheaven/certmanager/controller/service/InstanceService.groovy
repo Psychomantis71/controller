@@ -42,9 +42,12 @@ class InstanceService {
     @Autowired
     private final KeystoreRepository keystoreRepository
 
-    boolean adoptRequest(InstanceForm form){
-        //TODO PULL DEFAULT AGENT PASSWORD WHEN SET IN CONFIG
+    boolean adoptRequest(InstanceForm form, String ip){
         User user = userRepository.findByUserName("agent_user")
+        if(form.getIp() != ip){
+            LOG.warn("The self reported IP from the agent does not match up with the IP the request arrived from, will use the request IP")
+            form.setIp(ip)
+        }
         Instance instance = new Instance(
                 name: form.name,
                 hostname: form.hostname,

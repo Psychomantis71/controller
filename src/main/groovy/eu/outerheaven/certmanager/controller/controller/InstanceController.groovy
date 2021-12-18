@@ -17,6 +17,8 @@ import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 
+import javax.servlet.http.HttpServletRequest
+
 @RestController
 @RequestMapping("/api/instance")
 class InstanceController {
@@ -27,8 +29,9 @@ class InstanceController {
     private final InstanceService service
 
     @PostMapping("/request-adoption")
-    ResponseEntity adoptRequest(@RequestBody InstanceForm form) {
-        if(service.adoptRequest(form)){
+    ResponseEntity adoptRequest(@RequestBody InstanceForm form, HttpServletRequest request) {
+        String ip = request.getRemoteAddr()
+        if(service.adoptRequest(form, ip)){
             log.info("Entity with IP {}, hostname {} and port {} has been added as pending for adoption!", form.ip,form.hostname,form.port)
             return ResponseEntity.ok().body("Adoption pending from administrator")
             //return new ResponseEntity<String>("Adoption pending from administrator", HttpStatus.OK);
