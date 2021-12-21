@@ -33,6 +33,8 @@ class Certificate {
 
     private Long keystoreId
 
+    private Long signerCertificateId
+
     Long getId() {
         return id
     }
@@ -87,5 +89,13 @@ class Certificate {
 
     void setPrivateKey(PrivateKey privateKey) {
         this.privateKey = privateKey
+    }
+
+    Long getSignerCertificateId() {
+        return signerCertificateId
+    }
+
+    void setSignerCertificateId(Long signerCertificateId) {
+        this.signerCertificateId = signerCertificateId
     }
 }

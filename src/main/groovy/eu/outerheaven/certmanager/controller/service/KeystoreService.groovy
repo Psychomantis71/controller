@@ -312,13 +312,9 @@ class KeystoreService {
 
     }
 
-
-
-    //@Scheduled(cron = "${controller.mail.expiration.check}")
-
     @Transactional
     void scheduledCheck(){
-        if(environment.getProperty("controller.mail.expiration.alert").toBoolean()){
+        if(environment.getProperty("controller.expiration.check").toBoolean()){
             LOG.info("Starting scheduled job: expiration check");
             Date date = new Date()
             Calendar calendar = Calendar.getInstance();
@@ -360,7 +356,7 @@ class KeystoreService {
 
                     }
                 })
-                if(soonToExpireCertificates.size()>0 || expiredCertificates.size()>0){
+                if(soonToExpireCertificates.size()>0 || expiredCertificates.size()>0 && environment.getProperty("controller.mail.expiration.alert").toBoolean()){
                     mailService.sendKeystoreCertificateExpirationAlert(expiredCertificates, soonToExpireCertificates, instances.get(i))
                 }
             }

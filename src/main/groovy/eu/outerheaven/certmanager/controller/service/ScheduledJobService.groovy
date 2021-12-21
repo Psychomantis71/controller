@@ -24,7 +24,7 @@ class ScheduledJobService {
 
     private static final Logger LOG = LoggerFactory.getLogger(ScheduledJobService.class)
 
-    @Scheduled(cron = "\${controller.mail.expiration.check}")
+    @Scheduled(cron = "\${controller.expiration.check.period}")
     public void run() {
         keystoreService.scheduledCheck()
     }

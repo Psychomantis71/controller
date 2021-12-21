@@ -41,12 +41,16 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.security.*
 import java.security.cert.Certificate
+import java.security.cert.CertificateExpiredException
+import java.security.cert.CertificateNotYetValidException
 import java.security.cert.X509Certificate
+import java.security.interfaces.RSAPublicKey
 import java.text.DateFormat
 import java.text.SimpleDateFormat
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
+import java.util.concurrent.TimeUnit
 
 @Service
 class CaVaultService {
@@ -208,9 +212,112 @@ class CaVaultService {
         //else{
 
         //}
-        writeCertToFileBase64Encoded(issuedCert, "issued-cert.cer")
-        exportKeyPairToKeystoreFile(issuedCertKeyPair, issuedCert, "issued-cert", "issued-cert.pfx", "PKCS12", "pass")
+        //writeCertToFileBase64Encoded(issuedCert, "issued-cert.cer")
+        //exportKeyPairToKeystoreFile(issuedCertKeyPair, issuedCert, "issued-cert", "issued-cert.pfx", "PKCS12", "pass")
         LOG.info("CA signed cert has been created")
+
+    }
+
+    void renewCertificate(X509Certificate certificate, Boolean intermediate, Long signerCertId, Long certificateId){
+        CaCertificate parentCert = repository.findById(signerCertId).get()
+        Date firstDate = certificate.getNotBefore()
+        Date secondDate = certificate.getNotAfter()
+
+        long diffInMillies = Math.abs(secondDate.getTime() - firstDate.getTime());
+        long diff = TimeUnit.DAYS.convert(diffInMillies, TimeUnit.MILLISECONDS);
+
+        Calendar calendar = Calendar.getInstance();
+        //TODO REPLACE THIS WITH CONFIG VARIABLE
+        calendar.add(Calendar.DATE, diff.toInteger());
+
+        Date startDate = new Date()
+        Date endDate = calendar.getTime();
+
+        try{
+            parentCert.getX509Certificate().checkValidity(endDate)
+        }catch(CertificateExpiredException exception){
+            LOG.error("Unable to renew managed certificate with ID {}, the new notAfter date would be after the expiration date of the signer certificate assigned to it! ",certificateId)
+            throw new Exception("ASSIGN A SIGNER CERTIFICATE THAT WILL BE VALID AT THE NEW NOTAFTER DATE FOR THE ISSUED CERITIFATE")
+        }catch(CertificateNotYetValidException exception){
+            LOG.debug("Exception: ", exception)
+            throw new Exception("SIGNER CERTIFICATE NOT YET VALID")
+        }
+
+
+
+        KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance(certificate.getSigAlgName().toString(), BC_PROVIDER)
+        //CAST public key to RSA public to get modulus/keysize
+        RSAPublicKey pub = (RSAPublicKey) certificate.getPublicKey()
+        keyPairGenerator.initialize(pub.getModulus().bitLength())
+
+        // Generate a new KeyPair and sign it using the Root Cert Private Key
+        // by generating a CSR (Certificate Signing Request)
+        String issuedSubject = certificate.subjectDN.toString()
+
+        X500Name issuedCertSubject = new X500Name(issuedSubject)
+        BigInteger issuedCertSerialNum = new BigInteger(Long.toString(new SecureRandom().nextLong()))
+        KeyPair issuedCertKeyPair = keyPairGenerator.generateKeyPair()
+
+        PKCS10CertificationRequestBuilder p10Builder = new JcaPKCS10CertificationRequestBuilder(issuedCertSubject, issuedCertKeyPair.getPublic())
+        JcaContentSignerBuilder csrBuilder = new JcaContentSignerBuilder(certificate.getSigAlgName().toString()).setProvider(BC_PROVIDER)
+
+        // Sign the new KeyPair with the root cert Private Key
+        ContentSigner csrContentSigner = csrBuilder.build(parentCert.getPrivateKey())
+        PKCS10CertificationRequest csr = p10Builder.build(csrContentSigner)
+        // Use the Signed KeyPair and CSR to generate an issued Certificate
+        // Here serial number is randomly generated. In general, CAs use
+        // a sequence to generate Serial number and avoid collisions
+        X500Name parentCertSubject = new X500Name(parentCert.getX509Certificate().subjectDN.toString())
+        X509v3CertificateBuilder issuedCertBuilder = new X509v3CertificateBuilder(parentCertSubject, issuedCertSerialNum, startDate, endDate, csr.getSubject(), csr.getSubjectPublicKeyInfo())
+
+        JcaX509ExtensionUtils issuedCertExtUtils = new JcaX509ExtensionUtils()
+
+        // Add Extensions
+        // Use BasicConstraints to say that this Cert is not a CA
+        if(intermediate){
+            issuedCertBuilder.addExtension(Extension.basicConstraints, true, new BasicConstraints(true))
+        }else {
+            issuedCertBuilder.addExtension(Extension.basicConstraints, true, new BasicConstraints(false))
+        }
+
+        // Add Issuer cert identifier as Extension
+        issuedCertBuilder.addExtension(Extension.authorityKeyIdentifier, false, issuedCertExtUtils.createAuthorityKeyIdentifier(parentCert.getX509Certificate()))
+        issuedCertBuilder.addExtension(Extension.subjectKeyIdentifier, false, issuedCertExtUtils.createSubjectKeyIdentifier(csr.getSubjectPublicKeyInfo()))
+
+        // Add intended key usage extension if needed
+        issuedCertBuilder.addExtension(Extension.keyUsage, false, new KeyUsage(KeyUsage.keyEncipherment))
+
+        // Add DNS name is cert is to used for SSL
+        if(certificate.getSubjectAlternativeNames().getAt(2).toString() != null && certificate.getSubjectAlternativeNames().getAt(7).toString() != null ){
+            issuedCertBuilder.addExtension(Extension.subjectAlternativeName, false, new DERSequence(new ASN1Encodable[] {
+                    new GeneralName(GeneralName.dNSName, certificate.getSubjectAlternativeNames().getAt(2).toString()),
+                    new GeneralName(GeneralName.iPAddress, certificate.getSubjectAlternativeNames().getAt(7).toString())
+            }))
+        }else if(certificate.getSubjectAlternativeNames().getAt(2)!= null){
+            issuedCertBuilder.addExtension(Extension.subjectAlternativeName, false, new DERSequence(new ASN1Encodable[] {
+                    new GeneralName(GeneralName.dNSName, certificate.getSubjectAlternativeNames().getAt(2).toString()),
+            }))
+        }else if(certificate.getSubjectAlternativeNames().getAt(7) != null){
+            issuedCertBuilder.addExtension(Extension.subjectAlternativeName, false, new DERSequence(new ASN1Encodable[] {
+                    new GeneralName(GeneralName.iPAddress, certificate.getSubjectAlternativeNames().getAt(7).toString())
+            }))
+        }
+
+        X509CertificateHolder issuedCertHolder = issuedCertBuilder.build(csrContentSigner)
+        X509Certificate issuedCert  = new JcaX509CertificateConverter().setProvider(BC_PROVIDER).getCertificate(issuedCertHolder)
+
+        // Verify the issued cert signature against the root (issuer) cert
+        issuedCert.verify(parentCert.getX509Certificate().getPublicKey(), BC_PROVIDER)
+        if(newSignedCertificateForm.intermediate){
+            CaCertificate caCertificate = new CaCertificate(
+                    alias: newSignedCertificateForm.certAlias,
+                    privateKey: issuedCertKeyPair.getPrivate(),
+                    x509Certificate: issuedCert,
+                    managed: false
+            )
+            repository.save(caCertificate)
+        }
+
 
     }
 

@@ -26,6 +26,8 @@ class CaCertificate {
 
     private Boolean managed
 
+    private Long signerCertificateId
+
     Long getId() {
         return id
     }
@@ -65,5 +67,13 @@ class CaCertificate {
 
     void setPrivateKey(PrivateKey privateKey) {
         this.privateKey = privateKey
+    }
+
+    Long getSignerCertificateId() {
+        return signerCertificateId
+    }
+
+    void setSignerCertificateId(Long signerCertificateId) {
+        this.signerCertificateId = signerCertificateId
     }
 }
