@@ -32,9 +32,11 @@ import org.bouncycastle.util.encoders.Base64
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.core.env.Environment
 import org.springframework.core.io.ByteArrayResource
 import org.springframework.core.io.Resource
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 
 import java.nio.file.Files
 import java.nio.file.Path
@@ -43,6 +45,7 @@ import java.security.*
 import java.security.cert.Certificate
 import java.security.cert.CertificateExpiredException
 import java.security.cert.CertificateNotYetValidException
+import java.security.cert.CertificateParsingException
 import java.security.cert.X509Certificate
 import java.security.interfaces.RSAPublicKey
 import java.text.DateFormat
@@ -59,6 +62,14 @@ class CaVaultService {
 
     @Autowired
     private final CaCertificateRepository repository
+
+    @Autowired
+    private final CertificateRepository certificateRepository
+    @Autowired
+    private final MailService mailService
+
+    @Autowired
+    private Environment environment
 
     private static final String BC_PROVIDER = "BC"
     private static final String KEY_ALGORITHM = "RSA"
@@ -218,7 +229,8 @@ class CaVaultService {
 
     }
 
-    void renewCertificate(X509Certificate certificate, Boolean intermediate, Long signerCertId, Long certificateId){
+    void renew(X509Certificate certificate, Boolean intermediate, Long signerCertId, Long certificateId, Boolean cavaultcert){
+        LOG.info("Starting renewal process for certificate ID {}, CaVault: {}",certificateId,cavaultcert.toString())
         CaCertificate parentCert = repository.findById(signerCertId).get()
         Date firstDate = certificate.getNotBefore()
         Date secondDate = certificate.getNotAfter()
@@ -235,17 +247,17 @@ class CaVaultService {
 
         try{
             parentCert.getX509Certificate().checkValidity(endDate)
-        }catch(CertificateExpiredException exception){
+        }catch(CertificateExpiredException ignored){
             LOG.error("Unable to renew managed certificate with ID {}, the new notAfter date would be after the expiration date of the signer certificate assigned to it! ",certificateId)
-            throw new Exception("ASSIGN A SIGNER CERTIFICATE THAT WILL BE VALID AT THE NEW NOTAFTER DATE FOR THE ISSUED CERITIFATE")
+            throw new Exception("ASSIGN A SIGNER CERTIFICATE THAT WILL BE VALID AT THE NEW NOTAFTER DATE FOR THE ISSUED CERTIFICATE")
         }catch(CertificateNotYetValidException exception){
             LOG.debug("Exception: ", exception)
             throw new Exception("SIGNER CERTIFICATE NOT YET VALID")
         }
 
 
-
-        KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance(certificate.getSigAlgName().toString(), BC_PROVIDER)
+        //KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance(certificate.getSigAlgName().toString(), BC_PROVIDER)
+        KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance(certificate.getPublicKey().getAlgorithm(), BC_PROVIDER)
         //CAST public key to RSA public to get modulus/keysize
         RSAPublicKey pub = (RSAPublicKey) certificate.getPublicKey()
         keyPairGenerator.initialize(pub.getModulus().bitLength())
@@ -290,16 +302,16 @@ class CaVaultService {
         // Add DNS name is cert is to used for SSL
         if(certificate.getSubjectAlternativeNames().getAt(2).toString() != null && certificate.getSubjectAlternativeNames().getAt(7).toString() != null ){
             issuedCertBuilder.addExtension(Extension.subjectAlternativeName, false, new DERSequence(new ASN1Encodable[] {
-                    new GeneralName(GeneralName.dNSName, certificate.getSubjectAlternativeNames().getAt(2).toString()),
-                    new GeneralName(GeneralName.iPAddress, certificate.getSubjectAlternativeNames().getAt(7).toString())
+                    new GeneralName(GeneralName.dNSName, getAlternateNames(certificate,2)),
+                    new GeneralName(GeneralName.iPAddress, getAlternateNames(certificate,7))
             }))
         }else if(certificate.getSubjectAlternativeNames().getAt(2)!= null){
             issuedCertBuilder.addExtension(Extension.subjectAlternativeName, false, new DERSequence(new ASN1Encodable[] {
-                    new GeneralName(GeneralName.dNSName, certificate.getSubjectAlternativeNames().getAt(2).toString()),
+                    new GeneralName(GeneralName.dNSName, getAlternateNames(certificate,2)),
             }))
         }else if(certificate.getSubjectAlternativeNames().getAt(7) != null){
             issuedCertBuilder.addExtension(Extension.subjectAlternativeName, false, new DERSequence(new ASN1Encodable[] {
-                    new GeneralName(GeneralName.iPAddress, certificate.getSubjectAlternativeNames().getAt(7).toString())
+                    new GeneralName(GeneralName.iPAddress, getAlternateNames(certificate,7))
             }))
         }
 
@@ -308,17 +320,40 @@ class CaVaultService {
 
         // Verify the issued cert signature against the root (issuer) cert
         issuedCert.verify(parentCert.getX509Certificate().getPublicKey(), BC_PROVIDER)
-        if(newSignedCertificateForm.intermediate){
-            CaCertificate caCertificate = new CaCertificate(
-                    alias: newSignedCertificateForm.certAlias,
-                    privateKey: issuedCertKeyPair.getPrivate(),
-                    x509Certificate: issuedCert,
-                    managed: false
-            )
-            repository.save(caCertificate)
+        writeCertToFileBase64Encoded(issuedCert, "re-issued-cert.cer")
+        exportKeyPairToKeystoreFile(issuedCertKeyPair, issuedCert, "re-issued-cert", "issued-cert.pfx", "PKCS12", "password")
+        if(cavaultcert){
+            CaCertificate tosave = repository.findById(certificateId).get()
+            tosave.setPrivateKey(issuedCertKeyPair.getPrivate())
+            tosave.setX509Certificate(issuedCert)
+            repository.save(tosave)
+        }else{
+            eu.outerheaven.certmanager.controller.entity.Certificate tosave = certificateRepository.findById(certificateId).get()
+            tosave.setPrivateKey(issuedCertKeyPair.getPrivate())
+            tosave.setX509Certificate(issuedCert)
+            certificateRepository.save(tosave)
         }
+        LOG.info("Finished renewal process!")
+    }
 
+    void renewCaCertificate(List<CaCertificateFormGUI>  caCertificateFormGUI){
+        caCertificateFormGUI.forEach(r->{
+            CaCertificate caCertificate = repository.findById(r.id).get()
+            renew(caCertificate.getX509Certificate(), true, caCertificate.getSignerCertificateId(), r.getId())
+        })
+    }
 
+    void renewCertificate(Long signerCertificateId, CertificateFormGUI certificateFormGUI){
+
+    }
+
+    void assignSignerCaCert(Long signerCertificateId, List<CaCertificateFormGUI>  caCertificateFormGUI){
+        caCertificateFormGUI.forEach(r->{
+            CaCertificate caCertificate = repository.findById(r.getId()).get()
+            caCertificate.setSignerCertificateId(signerCertificateId)
+            caCertificate.setManaged(true)
+            repository.save(caCertificate)
+        })
     }
 
     void main(String[] args) throws Exception{
@@ -579,4 +614,84 @@ class CaVaultService {
         })
     }
 
+    @Transactional
+    void scheduledCheck(){
+        if(environment.getProperty("controller.expiration.check").toBoolean()){
+            LOG.info("Starting scheduled job: expiration check for certificates in CA Vault");
+            Date date = new Date()
+            Calendar calendar = Calendar.getInstance();
+            calendar.add(Calendar.DATE, environment.getProperty("controller.expiration.check.warn.period").toInteger());
+            Date currentDatePlus= calendar.getTime();
+            List<CaCertificate> caCertificates = repository.findAll() as List<CaCertificate>
+            List<CaCertificate> expiredCertificates = new ArrayList<>()
+            List<CaCertificate> soonToExpireCertificates = new ArrayList<>()
+
+            caCertificates.forEach(r->{
+
+                boolean alreadyExpired=false
+                boolean renewed = false
+                try{
+                    r.getX509Certificate().checkValidity(date)
+                }catch(CertificateExpiredException exception){
+                    if(r.managed){
+                        LOG.info("Renewing certificate in CA vault with alias {} and ID {}", r.alias,r.id)
+                        renew(r.getX509Certificate(),true,r.getSignerCertificateId(),r.id, true)
+                        renewed = true
+                    }else if(!renewed){
+                        expiredCertificates.add(r)
+                        alreadyExpired=true
+                        LOG.warn("Certificate with alias {} has already expired!", r.getAlias())
+                        LOG.debug("Exception: ", exception)
+                    }
+                }catch(CertificateNotYetValidException exception){
+                    LOG.debug("Exception: ", exception)
+                }
+                if(!alreadyExpired || !renewed){
+                    try{
+                        r.getX509Certificate().checkValidity(currentDatePlus)
+                    }catch(CertificateExpiredException exception){
+                        soonToExpireCertificates.add(r)
+                        LOG.warn("Certificate with alias {} is within expiration warning period!", r.getAlias())
+                        LOG.debug("Exception: ", exception)
+                    }catch(CertificateNotYetValidException exception){
+                        LOG.info("Certificate with alias {} is not yet valid!", r.getAlias())
+                        LOG.debug("Exception: ", exception)
+                    }
+                }
+
+            })
+            if(soonToExpireCertificates.size()>0 || expiredCertificates.size()>0 && environment.getProperty("controller.mail.expiration.alert").toBoolean()){
+                LOG.info("HERE MAIL WILL SEND SOME STUFF TO YOUR MAIL BUT THE LAZY ASS DEVELOPER IS TOO LAZY TO IMPLEMENT IT AT THE MOMENT")
+            }
+
+            LOG.info("Ended scheduled job: expiration check for certificates in CA Vault");
+        }
+    }
+
+    protected String getAlternateNames(final X509Certificate cert, Integer targetType) {
+        final StringBuilder res = new StringBuilder();
+
+        try {
+            if (cert.getSubjectAlternativeNames() == null) {
+                return null;
+            }
+
+            for (List<?> entry : cert.getSubjectAlternativeNames()) {
+                final int type = ((Integer) entry.get(0)).intValue();
+
+                // DNS or IP
+                if (type == targetType) {
+                    if (res.length() > 0) {
+                        res.append(", ");
+                    }
+
+                    res.append(entry.get(1));
+                }
+            }
+        } catch (CertificateParsingException ex) {
+            // Do nothing
+        }
+
+        return res.toString();
+    }
 }

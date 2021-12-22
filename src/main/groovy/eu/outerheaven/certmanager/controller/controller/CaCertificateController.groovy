@@ -74,4 +74,14 @@ class CaCertificateController {
         ResponseEntity.ok(service.remove(certificateFormGUIS))
     }
 
+    @PostMapping("/{signerCertificateId}/cacert-assign-signer")
+    ResponseEntity assignSigner(@PathVariable Long signerCertificateId, @RequestBody List<CaCertificateFormGUI> caCertificateFormGUI){
+        service.assignSignerCaCert(signerCertificateId, caCertificateFormGUI)
+    }
+
+    @PostMapping("/{signerCertificateId}/renew-cacert")
+    ResponseEntity renewCaCert(@PathVariable Long signerCertificateId, @RequestBody List<CaCertificateFormGUI> caCertificateFormGUI){
+            service.renewCaCertificate(caCertificateFormGUI)
+    }
+
 }

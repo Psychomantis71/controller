@@ -22,10 +22,13 @@ class ScheduledJobService {
     @Autowired
     KeystoreService keystoreService
 
+    @Autowired
+    CaVaultService caVaultService
     private static final Logger LOG = LoggerFactory.getLogger(ScheduledJobService.class)
 
     @Scheduled(cron = "\${controller.expiration.check.period}")
     public void run() {
+        caVaultService.scheduledCheck()
         keystoreService.scheduledCheck()
     }
 

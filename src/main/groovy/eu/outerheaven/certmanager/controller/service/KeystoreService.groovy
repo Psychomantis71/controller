@@ -315,11 +315,10 @@ class KeystoreService {
     @Transactional
     void scheduledCheck(){
         if(environment.getProperty("controller.expiration.check").toBoolean()){
-            LOG.info("Starting scheduled job: expiration check");
+            LOG.info("Starting scheduled job: expiration check for certificates in keystores");
             Date date = new Date()
             Calendar calendar = Calendar.getInstance();
-            //TODO REPLACE THIS WITH CONFIG VARIABLE
-            calendar.add(Calendar.DATE, 1);
+            calendar.add(Calendar.DATE, environment.getProperty("controller.expiration.check.warn.period").toInteger());
             Date currentDatePlus= calendar.getTime();
 
             List<Instance> instances = instanceRepository.findAll()
@@ -362,7 +361,7 @@ class KeystoreService {
             }
 
         }
-        LOG.info("Ended scheduled job: expiration check");
+        LOG.info("Ended scheduled job: expiration check for certificates in keystores");
     }
 
 }

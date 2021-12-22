@@ -388,6 +388,118 @@
           </v-card>
         </v-dialog>
 
+
+
+        <v-dialog
+          v-model="assignSignerDialog"
+          max-width="800px"
+        >
+          <template v-slot:activator="{ on, attrs }">
+            <v-btn
+              dark
+              color="teal lighten-1"
+              class="ma-2"
+              v-bind="attrs"
+              v-on="on"
+            >
+              Assign signer
+            </v-btn>
+          </template>
+          <v-card>
+            <v-card-title>
+              <span class="text-h5">Select a signer</span>
+            </v-card-title>
+
+            <v-card-text>
+              <v-container>
+
+                <v-card>
+                  <v-card-title>
+                    <v-text-field
+                      v-model="searchSigner"
+                      append-icon="mdi-magnify"
+                      label="Search"
+                      single-line
+                      hide-details
+                    />
+                  </v-card-title>
+                  <v-data-table
+                    v-model="selectedSigners"
+                    :headers="headers"
+                    :items="certificatelist"
+                    :search="searchSigner"
+                    :expanded.sync="expanded"
+                    item-key="id"
+                    show-select
+                    show-expand
+                    class="elevation-1"
+                  >
+                    <template v-slot:item.status="{ item }">
+                      <v-chip
+                        :color="getStatusColor(item.status)"
+                        dark
+                      >
+                        {{ item.status }}
+                      </v-chip>
+                    </template>
+                    <template v-slot:item.level="{ item }">
+                      <v-chip
+                        :color="getLevelColour(item.level)"
+                        dark
+                      >
+                        {{ item.level }}
+                      </v-chip>
+                    </template>
+                    <template v-slot:item.managed="{ item }">
+                      <v-chip
+                        :color="getManagedColor(item.managed)"
+                        dark
+                      >
+                        {{ item.managed }}
+                      </v-chip>
+                    </template>
+                    <template v-slot:expanded-item="{ item }">
+                      <td :colspan="headers.length">
+                        Details about {{ item.alias }}
+                        <br>
+                        Subject: {{ item.subject }}
+                        <br>
+                        Issuer: {{ item.issuer }}
+                        <br>
+                        Valid from: {{ item.validFrom }}
+                        <br>
+                        Valid to: {{ item.validTo }}
+                        <br>
+                        Serial: {{ item.serial }}
+                        <br>
+                      </td>
+                    </template>
+                  </v-data-table>
+                </v-card>
+
+              </v-container>
+            </v-card-text>
+
+            <v-card-actions>
+              <v-spacer />
+              <v-btn
+                color="blue darken-1"
+                text
+                @click="closeAssignedSigner"
+              >
+                Cancel
+              </v-btn>
+              <v-btn
+                color="blue darken-1"
+                text
+                @click="submitAssignedSigner"
+              >
+                Assign
+              </v-btn>
+            </v-card-actions>
+          </v-card>
+        </v-dialog>
+
         <v-btn
           dark
           color="teal lighten-1"
@@ -849,6 +961,7 @@ export default {
     return {
       fileToUpload:null,
       dialogImportCert:false,
+      assignSignerDialog:false,
       show1: false,
       importItem: {
         password: '',
@@ -909,7 +1022,9 @@ export default {
       toMenuSigned:false,
       certificatelist: [],
       selected: [],
+      selectedSigners: [],
       search: '',
+      searchSigner:'',
       headers: [
         {
           text: 'ID',
@@ -979,6 +1094,20 @@ export default {
       console.log('CA data:', this.newCa)
       this.close()
     },
+    postAssignerSigner() {
+      this.$axios
+        .post(`http://localhost:8091/api/cavault/${this.selectedSigners[0].id}/cacert-assign-signer`, this.selected)
+        .then((response) => {
+          console.log('Post response: ', response.data);
+        })
+        .catch((error) => {
+          this.alert = true;
+          console.log('Error while trying to create new root cert:',error);
+        });
+
+      console.log('CA data:', this.newCa)
+      this.close()
+    },
     postNewSigned() {
       this.newSignedCert.intermediate = true
       this.newSignedCert.signingCertId = this.selected[0].id
@@ -1026,7 +1155,7 @@ export default {
       return 'red';
     },
     getManagedColor(status) {
-      if (status === 'YES') return 'green';
+      if (status === true) return 'green';
       return 'red';
     },
     getLevelColour(level) {
@@ -1115,6 +1244,13 @@ export default {
     },
     closeReplaceCert() {
       this.dialogReplace = false;
+    },
+    submitAssignedSigner() {
+      this.postAssignerSigner();
+      this.closeAssignedSigner();
+    },
+    closeAssignedSigner() {
+      this.assignSignerDialog = false;
     },
   },
 };
