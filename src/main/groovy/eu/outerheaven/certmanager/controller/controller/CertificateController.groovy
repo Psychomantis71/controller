@@ -2,6 +2,7 @@ package eu.outerheaven.certmanager.controller.controller
 
 import eu.outerheaven.certmanager.controller.dto.CertificateDto
 import eu.outerheaven.certmanager.controller.dto.CertificateImportDto
+import eu.outerheaven.certmanager.controller.form.CaCertificateFormGUI
 import eu.outerheaven.certmanager.controller.form.CertificateFormGUI
 import eu.outerheaven.certmanager.controller.form.KeystoreForm
 import eu.outerheaven.certmanager.controller.service.CaVaultService
@@ -74,7 +75,7 @@ class CertificateController {
 
         try{
             LOG.info("Filename on response is:" + filename)
-            return ResponseEntity.ok().header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"").body(resource)
+            ResponseEntity.ok().header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"").body(resource)
         }catch(Exception exception){
             LOG.error("Error while exporting file: " + exception)
         }
@@ -85,6 +86,12 @@ class CertificateController {
     @PostMapping("/import")
     ResponseEntity importCert(@RequestBody CertificateImportDto certificateImportDto){
         ResponseEntity.ok(service.importCertificate(certificateImportDto))
+    }
+
+    @PostMapping("/{signerCertificateId}/assign-signer")
+    ResponseEntity assignSigner(@PathVariable Long signerCertificateId, @RequestBody List<CertificateFormGUI> certificateFormGUIS){
+        service.assignSignerCert(signerCertificateId, certificateFormGUIS)
+        ResponseEntity.ok().body("")
     }
 
 }

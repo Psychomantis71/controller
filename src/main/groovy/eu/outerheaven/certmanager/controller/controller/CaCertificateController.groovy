@@ -11,6 +11,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.core.io.Resource
 import org.springframework.http.HttpHeaders
+import org.springframework.http.RequestEntity
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
@@ -83,5 +84,6 @@ class CaCertificateController {
     ResponseEntity renewCaCert(@PathVariable Long signerCertificateId, @RequestBody List<CaCertificateFormGUI> caCertificateFormGUI){
             service.renewCaCertificate(caCertificateFormGUI)
     }
+
 
 }

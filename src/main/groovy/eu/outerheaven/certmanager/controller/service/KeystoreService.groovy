@@ -18,6 +18,7 @@ import eu.outerheaven.certmanager.controller.util.PreparedRequest
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.boot.autoconfigure.AutoConfigureOrder
 import org.springframework.core.ParameterizedTypeReference
 import org.springframework.core.env.Environment
 import org.springframework.http.HttpEntity
@@ -55,6 +56,9 @@ class KeystoreService {
 
     @Autowired
     private final MailService mailService
+
+    @Autowired
+    private final CaVaultService caVaultService
 
     @Autowired
     private Environment environment
@@ -330,17 +334,24 @@ class KeystoreService {
                     List<Certificate> keystoreCertificates = certificateRepository.findByKeystoreId(k.getId())
                     for(int c=0;c<keystoreCertificates.size();c++){
                         boolean alreadyExpired=false
+                        boolean renewed = false;
                         try{
                             keystoreCertificates.get(c).getX509Certificate().checkValidity(date)
                         }catch(CertificateExpiredException exception){
-                            expiredCertificates.add(keystoreCertificates.get(c))
-                            alreadyExpired=true
-                            LOG.warn("Certificate with alias {} has already expired!", keystoreCertificates.get(c).getAlias())
-                            LOG.debug("Exception: ", exception)
+
+                            if(keystoreCertificates.get(c).managed){
+                                caVaultService.renew(keystoreCertificates.get(c).getX509Certificate(),false,keystoreCertificates.get(c).getSignerCertificateId(),keystoreCertificates.get(c).getId())
+                                renewed=true
+                            }else if(!renewed){
+                                expiredCertificates.add(keystoreCertificates.get(c))
+                                alreadyExpired=true
+                                LOG.warn("Certificate with alias {} has already expired!", keystoreCertificates.get(c).getAlias())
+                                LOG.debug("Exception: ", exception)
+                            }
                         }catch(CertificateNotYetValidException exception){
                             LOG.debug("Exception: ", exception)
                         }
-                        if(!alreadyExpired){
+                        if(!alreadyExpired && !renewed){
                             try{
                                 keystoreCertificates.get(c).getX509Certificate().checkValidity(currentDatePlus)
                             }catch(CertificateExpiredException exception){

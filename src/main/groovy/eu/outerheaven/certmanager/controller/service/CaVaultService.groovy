@@ -229,8 +229,8 @@ class CaVaultService {
 
     }
 
-    void renew(X509Certificate certificate, Boolean intermediate, Long signerCertId, Long certificateId, Boolean cavaultcert){
-        LOG.info("Starting renewal process for certificate ID {}, CaVault: {}",certificateId,cavaultcert.toString())
+    void renew(X509Certificate certificate, Boolean cavault, Long signerCertId, Long certificateId){
+        LOG.info("Starting renewal process for certificate ID {}, CaVault: {}",certificateId,cavault.toString())
         CaCertificate parentCert = repository.findById(signerCertId).get()
         Date firstDate = certificate.getNotBefore()
         Date secondDate = certificate.getNotAfter()
@@ -244,6 +244,7 @@ class CaVaultService {
 
         Date startDate = new Date()
         Date endDate = calendar.getTime();
+        boolean[] keyUsage = certificate.getKeyUsage()
 
         try{
             parentCert.getX509Certificate().checkValidity(endDate)
@@ -286,7 +287,7 @@ class CaVaultService {
 
         // Add Extensions
         // Use BasicConstraints to say that this Cert is not a CA
-        if(intermediate){
+        if(keyUsage[5]){
             issuedCertBuilder.addExtension(Extension.basicConstraints, true, new BasicConstraints(true))
         }else {
             issuedCertBuilder.addExtension(Extension.basicConstraints, true, new BasicConstraints(false))
@@ -320,9 +321,9 @@ class CaVaultService {
 
         // Verify the issued cert signature against the root (issuer) cert
         issuedCert.verify(parentCert.getX509Certificate().getPublicKey(), BC_PROVIDER)
-        writeCertToFileBase64Encoded(issuedCert, "re-issued-cert.cer")
-        exportKeyPairToKeystoreFile(issuedCertKeyPair, issuedCert, "re-issued-cert", "issued-cert.pfx", "PKCS12", "password")
-        if(cavaultcert){
+        //writeCertToFileBase64Encoded(issuedCert, "re-issued-cert.cer")
+        //exportKeyPairToKeystoreFile(issuedCertKeyPair, issuedCert, "re-issued-cert", "issued-cert.pfx", "PKCS12", "password")
+        if(cavault){
             CaCertificate tosave = repository.findById(certificateId).get()
             tosave.setPrivateKey(issuedCertKeyPair.getPrivate())
             tosave.setX509Certificate(issuedCert)
@@ -343,8 +344,11 @@ class CaVaultService {
         })
     }
 
-    void renewCertificate(Long signerCertificateId, CertificateFormGUI certificateFormGUI){
-
+    void renewCertificate(List<CertificateFormGUI> certificateFormGUIS){
+        certificateFormGUIS.forEach(r->{
+            eu.outerheaven.certmanager.controller.entity.Certificate certificate = certificateRepository.findById(r.id).get()
+            renew(certificate.getX509Certificate(),false,certificate.getSignerCertificateId(),certificate.getId())
+        })
     }
 
     void assignSignerCaCert(Long signerCertificateId, List<CaCertificateFormGUI>  caCertificateFormGUI){
@@ -635,7 +639,7 @@ class CaVaultService {
                 }catch(CertificateExpiredException exception){
                     if(r.managed){
                         LOG.info("Renewing certificate in CA vault with alias {} and ID {}", r.alias,r.id)
-                        renew(r.getX509Certificate(),true,r.getSignerCertificateId(),r.id, true)
+                        renew(r.getX509Certificate(),true,r.getSignerCertificateId(),r.id)
                         renewed = true
                     }else if(!renewed){
                         expiredCertificates.add(r)
@@ -661,7 +665,7 @@ class CaVaultService {
 
             })
             if(soonToExpireCertificates.size()>0 || expiredCertificates.size()>0 && environment.getProperty("controller.mail.expiration.alert").toBoolean()){
-                LOG.info("HERE MAIL WILL SEND SOME STUFF TO YOUR MAIL BUT THE LAZY ASS DEVELOPER IS TOO LAZY TO IMPLEMENT IT AT THE MOMENT")
+                mailService.sendKeystoreCaCertificateExpirationAlert(expiredCertificates,soonToExpireCertificates)
             }
 
             LOG.info("Ended scheduled job: expiration check for certificates in CA Vault");

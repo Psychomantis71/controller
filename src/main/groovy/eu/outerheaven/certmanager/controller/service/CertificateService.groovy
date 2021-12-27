@@ -2,9 +2,11 @@ package eu.outerheaven.certmanager.controller.service
 
 import eu.outerheaven.certmanager.controller.dto.CertificateDto
 import eu.outerheaven.certmanager.controller.dto.CertificateImportDto
+import eu.outerheaven.certmanager.controller.entity.CaCertificate
 import eu.outerheaven.certmanager.controller.entity.Certificate
 import eu.outerheaven.certmanager.controller.entity.Instance
 import eu.outerheaven.certmanager.controller.entity.Keystore
+import eu.outerheaven.certmanager.controller.form.CaCertificateFormGUI
 import eu.outerheaven.certmanager.controller.form.CertificateFormGUI
 import eu.outerheaven.certmanager.controller.form.InstanceForm
 import eu.outerheaven.certmanager.controller.form.KeystoreForm
@@ -267,6 +269,15 @@ class CertificateService {
             certificateDtos.add(toDto(r))
         })
         return certificateDtos
+    }
+
+    void assignSignerCert(Long signerCertificateId, List<CertificateFormGUI>  certificateFormGUIS){
+        certificateFormGUIS.forEach(r->{
+            Certificate certificate = repository.findById(r.getId()).get()
+            certificate.setSignerCertificateId(signerCertificateId)
+            certificate.setManaged(true)
+            repository.save(certificate)
+        })
     }
 
 
