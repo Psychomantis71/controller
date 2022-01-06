@@ -1,17 +1,13 @@
 package eu.outerheaven.certmanager.controller.entity
 
-import javax.persistence.Column
 import javax.persistence.Entity
 import javax.persistence.GeneratedValue
 import javax.persistence.GenerationType
 import javax.persistence.Id
 import javax.persistence.ManyToOne
-import java.security.Key
-import java.security.PrivateKey
-import java.security.cert.X509Certificate
 
 @Entity
-class CaCertificate {
+class KeystoreCertificate {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -20,7 +16,11 @@ class CaCertificate {
     @ManyToOne
     private Certificate certificate
 
+    private Long agentId
+
     private String alias
+
+    private Long keystoreId
 
     Long getId() {
         return id
@@ -38,11 +38,27 @@ class CaCertificate {
         this.certificate = certificate
     }
 
+    Long getAgentId() {
+        return agentId
+    }
+
+    void setAgentId(Long agentId) {
+        this.agentId = agentId
+    }
+
     String getAlias() {
         return alias
     }
 
     void setAlias(String alias) {
         this.alias = alias
+    }
+
+    Long getKeystoreId() {
+        return keystoreId
+    }
+
+    void setKeystoreId(Long keystoreId) {
+        this.keystoreId = keystoreId
     }
 }

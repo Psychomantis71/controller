@@ -5,6 +5,7 @@ import javax.persistence.Entity
 import javax.persistence.GeneratedValue
 import javax.persistence.GenerationType
 import javax.persistence.Id
+import javax.persistence.ManyToOne
 import javax.persistence.OneToMany
 
 @Entity
@@ -17,8 +18,8 @@ class Keystore {
     //ID of keystore on the agent side
     private Long agentId
 
-    //ID of instance under which this keystore is
-    private Long instanceId
+    @ManyToOne
+    private Instance instance
 
     private String location
 
@@ -27,7 +28,7 @@ class Keystore {
     private String password
 
     @OneToMany(cascade = CascadeType.ALL, mappedBy = "keystoreId", orphanRemoval = true)
-    private List<Certificate> certificates
+    private List<KeystoreCertificate> keystoreCertificates
 
     Long getId() {
         return id
@@ -45,12 +46,12 @@ class Keystore {
         this.agentId = agentId
     }
 
-    Long getInstanceId() {
-        return instanceId
+    Instance getInstance() {
+        return instance
     }
 
-    void setInstanceId(Long instanceId) {
-        this.instanceId = instanceId
+    void setInstance(Instance instance) {
+        this.instance = instance
     }
 
     String getLocation() {
@@ -77,12 +78,11 @@ class Keystore {
         this.password = password
     }
 
-    List<Certificate> getCertificates() {
-        return certificates
+    List<KeystoreCertificate> getKeystoreCertificates() {
+        return keystoreCertificates
     }
 
-    void setCertificates(List<Certificate> certificates) {
-        this.certificates = certificates
+    void setKeystoreCertificates(List<KeystoreCertificate> keystoreCertificates) {
+        this.keystoreCertificates = keystoreCertificates
     }
-
 }

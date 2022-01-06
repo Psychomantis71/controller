@@ -6,15 +6,8 @@ class CertificateDto {
 
     Long id
 
-    Long agent_id
+    String encodedX509Certificate
 
-    String alias
+    String encodedPrivateKey
 
-    String key
-
-    String encodedX509
-
-    Boolean managed
-
-    Long keystoreId
 }
