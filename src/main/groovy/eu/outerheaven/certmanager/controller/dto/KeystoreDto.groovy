@@ -1,5 +1,7 @@
 package eu.outerheaven.certmanager.controller.dto
 
+import eu.outerheaven.certmanager.controller.entity.KeystoreCertificate
+
 
 class KeystoreDto {
 
@@ -9,5 +11,5 @@ class KeystoreDto {
     String location
     String description
     String password
-    List<CertificateDto> certificates
+    List<KeystoreCertificateDto> keystoreCertificateDtos
 }
