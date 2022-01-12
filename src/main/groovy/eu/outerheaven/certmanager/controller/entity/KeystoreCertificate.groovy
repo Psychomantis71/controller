@@ -1,5 +1,6 @@
 package eu.outerheaven.certmanager.controller.entity
 
+import javax.persistence.CascadeType
 import javax.persistence.Entity
 import javax.persistence.GeneratedValue
 import javax.persistence.GenerationType
@@ -13,7 +14,7 @@ class KeystoreCertificate {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id
 
-    @ManyToOne
+    @ManyToOne(cascade = CascadeType.ALL)
     private Certificate certificate
 
     private Long agentId

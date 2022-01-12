@@ -1,5 +1,6 @@
 package eu.outerheaven.certmanager.controller.entity
 
+import javax.persistence.CascadeType
 import javax.persistence.Entity
 import javax.persistence.GeneratedValue
 import javax.persistence.GenerationType
@@ -16,7 +17,7 @@ class StandaloneCertificate {
     @ManyToOne
     private Instance instance
 
-    @ManyToOne
+    @ManyToOne(cascade = CascadeType.ALL)
     private Certificate certificate
 
     private Long agentId

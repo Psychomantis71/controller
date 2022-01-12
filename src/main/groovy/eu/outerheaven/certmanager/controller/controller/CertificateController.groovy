@@ -2,12 +2,10 @@ package eu.outerheaven.certmanager.controller.controller
 
 import eu.outerheaven.certmanager.controller.dto.CertificateDto
 import eu.outerheaven.certmanager.controller.dto.CertificateImportDto
-import eu.outerheaven.certmanager.controller.form.CaCertificateFormGUI
 import eu.outerheaven.certmanager.controller.form.CertificateFormGUI
 import eu.outerheaven.certmanager.controller.form.KeystoreForm
 import eu.outerheaven.certmanager.controller.service.CaVaultService
-import eu.outerheaven.certmanager.controller.service.CertificateService
-import eu.outerheaven.certmanager.controller.service.KeystoreService
+import eu.outerheaven.certmanager.controller.service.KeystoreCertificateService
 import eu.outerheaven.certmanager.controller.util.PreparedRequest
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -15,7 +13,6 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.core.io.Resource
 import org.springframework.http.HttpHeaders
 import org.springframework.http.ResponseEntity
-import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
@@ -33,7 +30,7 @@ class CertificateController {
     private final Logger LOG = LoggerFactory.getLogger(CertificateController)
 
     @Autowired
-    private final CertificateService service
+    private final KeystoreCertificateService service
 
     @Autowired
     private final CaVaultService caVaultService

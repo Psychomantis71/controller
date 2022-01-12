@@ -3,6 +3,8 @@ package eu.outerheaven.certmanager.controller.util
 import com.ibm.security.cmskeystore.CMSProvider
 import com.sun.xml.internal.messaging.saaj.util.ByteInputStream
 import eu.outerheaven.certmanager.controller.entity.Keystore
+import eu.outerheaven.certmanager.controller.entity.KeystoreCertificate
+import org.bouncycastle.asn1.cms.KEKIdentifier
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.bouncycastle.openssl.PEMParser
 import org.slf4j.Logger
@@ -213,6 +215,8 @@ class CertificateLoader {
         }
     }
 
+    //USED below
+
     String encodeX509(X509Certificate x509Certificate){
         try{
             ByteArrayOutputStream binaryOutput = new ByteArrayOutputStream()
@@ -351,7 +355,6 @@ class CertificateLoader {
                 if(doesKeyPairMatch(privateKeys.get(n),x509Certificates.get(i).getPublicKey())){
                     LOG.info("Keypair match found!")
                     Certificate certificate = new Certificate(
-                            alias: filename + "_" + i.toString(),
                             privateKey: privateKeys.get(n),
                             x509Certificate: x509Certificates.get(i),
                             managed: false,
@@ -362,7 +365,6 @@ class CertificateLoader {
             }
             if(certificates.size() < i+1){
                 Certificate certificate = new Certificate(
-                        alias: filename + "_" + i.toString(),
                         x509Certificate: x509Certificates.get(i),
                         managed: false,
                 )
@@ -423,7 +425,6 @@ class CertificateLoader {
             }else{
                 for(int i=0;i<certificates.size();i++){
                     Certificate certificate = new Certificate(
-                            alias: filename + "_" + i.toString(),
                             x509Certificate: certificates.get(i),
                             managed: false,
                     )
@@ -438,11 +439,11 @@ class CertificateLoader {
         }
     }
 
-    List<Certificate> decodeImportPCKS12(String input, String password) throws KeyStoreException, IOException, CertificateException, NoSuchAlgorithmException{
+    List<KeystoreCertificate> decodeImportPCKS12(String input, String password) throws KeyStoreException, IOException, CertificateException, NoSuchAlgorithmException{
         byte [] data = Base64.getDecoder().decode(input.getBytes(StandardCharsets.UTF_8))
         String[] types = new String[]{"JKS", "JCEKS", "PKCS12", "IBMCMSKS",/*BC types*/ "BKS", "PKCS12", "UBER"}
         boolean read = false
-        List<Certificate> certificates = new ArrayList<>()
+        List<KeystoreCertificate> keystoreCertificates = new ArrayList<>()
         Security.addProvider(new BouncyCastleProvider())
         Security.addProvider(new CMSProvider())
         for (int i = 0; i < types.length; ++i) {
@@ -458,16 +459,18 @@ class CertificateLoader {
                 LOG.debug("Reading aliases from keystore")
                 Enumeration<String> aliases = keystore.aliases()
                 while (aliases.hasMoreElements()) {
+                    KeystoreCertificate keystoreCertificate = new KeystoreCertificate()
                     Certificate certificate = new Certificate()
                     String alias = aliases.nextElement()
                     if(keystore.getKey(alias,password.toCharArray()) != null){
                         certificate.setPrivateKey(keystore.getKey(alias,password.toCharArray()) as PrivateKey)
                         LOG.info("Certificate with alias {} has a private key attached to it!",alias)
                     }
-                    certificate.setAlias(alias)
+                    keystoreCertificate.setAlias(alias)
                     certificate.setX509Certificate(keystore.getCertificate(alias) as X509Certificate)
                     certificate.setManaged(false)
-                    certificates.add(certificate)
+                    keystoreCertificate.setCertificate(certificate)
+                    keystoreCertificates.add(keystoreCertificate)
                     //certificates.add((X509Certificate) keystore.getCertificate(alias))
                     LOG.debug("Read certificate with alias: " + alias)
                 }
@@ -481,7 +484,7 @@ class CertificateLoader {
         if (!read) {
             throw new RuntimeException("Could not read imported keystore: ")
         }
-        return certificates
+        return keystoreCertificates
     }
 
 }

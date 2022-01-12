@@ -2,47 +2,40 @@ package eu.outerheaven.certmanager.controller.service
 
 import eu.outerheaven.certmanager.controller.dto.CertificateDto
 import eu.outerheaven.certmanager.controller.dto.CertificateImportDto
-import eu.outerheaven.certmanager.controller.entity.CaCertificate
 import eu.outerheaven.certmanager.controller.entity.Certificate
 import eu.outerheaven.certmanager.controller.entity.Instance
 import eu.outerheaven.certmanager.controller.entity.Keystore
-import eu.outerheaven.certmanager.controller.form.CaCertificateFormGUI
+import eu.outerheaven.certmanager.controller.entity.KeystoreCertificate
 import eu.outerheaven.certmanager.controller.form.CertificateFormGUI
-import eu.outerheaven.certmanager.controller.form.InstanceForm
-import eu.outerheaven.certmanager.controller.form.KeystoreForm
 import eu.outerheaven.certmanager.controller.form.KeystoreFormGUI
 import eu.outerheaven.certmanager.controller.repository.CertificateRepository
 import eu.outerheaven.certmanager.controller.repository.InstanceRepository
 import eu.outerheaven.certmanager.controller.repository.KeystoreRepository
 import eu.outerheaven.certmanager.controller.util.CertificateLoader
 import eu.outerheaven.certmanager.controller.util.PreparedRequest
-import eu.outerheaven.certmanager.controller.util.deserializers.X509CertificateDeserializer
 import org.apache.tomcat.util.http.fileupload.FileUtils
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.core.io.ByteArrayResource
 import org.springframework.core.io.Resource
-import org.springframework.core.io.UrlResource
 import org.springframework.http.HttpEntity
 import org.springframework.http.HttpMethod
 import org.springframework.http.ResponseEntity
 import org.springframework.stereotype.Service
 import org.springframework.web.client.RestTemplate
 
-import javax.servlet.http.HttpServletRequest
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
-import java.security.cert.X509Certificate
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
 
 @Service
-class CertificateService {
+class KeystoreCertificateService {
 
-    private final Logger LOG = LoggerFactory.getLogger(CertificateService)
+    private final Logger LOG = LoggerFactory.getLogger(KeystoreCertificateService)
 
     @Autowired
     private final KeystoreRepository keystoreRepository
@@ -55,10 +48,10 @@ class CertificateService {
 
     String api_url="/api/certificate"
 
-    CertificateFormGUI toFormGUI(Certificate certificate){
+    CertificateFormGUI toFormGUI(KeystoreCertificate certificate){
         Keystore keystore = keystoreRepository.findById(certificate.getKeystoreId()).get()
-        Instance instance = instanceRepository.findById(keystore.getInstanceId()).get()
-        String status = certStatus(certificate.getX509Certificate().getNotBefore(), certificate.getX509Certificate().getNotAfter())
+        Instance instance = instanceRepository.findById(keystore.getInstance().getId()).get()
+        String status = certStatus(certificate.getCertificate().getX509Certificate().getNotBefore(), certificate.getX509Certificate().getNotAfter())
         Boolean pk=false
         if(certificate.getPrivateKey() != null){
             pk=true

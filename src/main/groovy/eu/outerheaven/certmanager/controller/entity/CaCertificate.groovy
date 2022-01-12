@@ -1,5 +1,6 @@
 package eu.outerheaven.certmanager.controller.entity
 
+import javax.persistence.CascadeType
 import javax.persistence.Column
 import javax.persistence.Entity
 import javax.persistence.GeneratedValue
@@ -17,7 +18,7 @@ class CaCertificate {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id
 
-    @ManyToOne
+    @ManyToOne(cascade = CascadeType.ALL)
     private Certificate certificate
 
     private String alias

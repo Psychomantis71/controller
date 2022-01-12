@@ -2,12 +2,17 @@ package eu.outerheaven.certmanager.controller.service
 
 import eu.outerheaven.certmanager.controller.dto.CertificateImportDto
 import eu.outerheaven.certmanager.controller.entity.CaCertificate
+import eu.outerheaven.certmanager.controller.entity.KeystoreCertificate
+import eu.outerheaven.certmanager.controller.entity.StandaloneCertificate
 import eu.outerheaven.certmanager.controller.form.CaCertificateForm
 import eu.outerheaven.certmanager.controller.form.CaCertificateFormGUI
 import eu.outerheaven.certmanager.controller.form.CertificateFormGUI
 import eu.outerheaven.certmanager.controller.form.NewSignedCertificateForm
 import eu.outerheaven.certmanager.controller.repository.CaCertificateRepository
 import eu.outerheaven.certmanager.controller.repository.CertificateRepository
+import eu.outerheaven.certmanager.controller.repository.KeystoreCertificateRepository
+import eu.outerheaven.certmanager.controller.repository.KeystoreRepository
+import eu.outerheaven.certmanager.controller.repository.StandaloneCertificateRepository
 import eu.outerheaven.certmanager.controller.util.CertificateLoader
 import org.apache.tomcat.util.http.fileupload.FileUtils
 import org.bouncycastle.asn1.ASN1Encodable
@@ -65,6 +70,13 @@ class CaVaultService {
 
     @Autowired
     private final CertificateRepository certificateRepository
+
+    @Autowired
+    private final StandaloneCertificateRepository standaloneCertificateRepository
+
+    @Autowired
+    private final KeystoreCertificateRepository keystoreCertificateRepository
+
     @Autowired
     private final MailService mailService
 
@@ -75,6 +87,7 @@ class CaVaultService {
     private static final String KEY_ALGORITHM = "RSA"
     private static final String SIGNATURE_ALGORITHM = "SHA256withRSA"
 
+    //refactored
     void createRootCert(CaCertificateForm caCertificateForm){
         LOG.info("Starting the creation of new root cert")
         Security.addProvider(new BouncyCastleProvider())
@@ -112,11 +125,15 @@ class CaVaultService {
         X509CertificateHolder rootCertHolder = rootCertBuilder.build(rootCertContentSigner)
         X509Certificate rootCert = new JcaX509CertificateConverter().setProvider(BC_PROVIDER).getCertificate(rootCertHolder)
 
-        CaCertificate caCertificate = new CaCertificate(
-                alias: caCertificateForm.getCertAlias(),
+        eu.outerheaven.certmanager.controller.entity.Certificate certificate = new eu.outerheaven.certmanager.controller.entity.Certificate(
                 privateKey: rootKeyPair.getPrivate(),
                 x509Certificate: rootCert,
                 managed: false
+        )
+        //certificateRepository.save(certificate)
+        CaCertificate caCertificate = new CaCertificate(
+                alias: caCertificateForm.getCertAlias(),
+                certificate: certificate
 
         )
         repository.save(caCertificate)
@@ -126,11 +143,13 @@ class CaVaultService {
 
     }
 
+    //refactored
     List<CaCertificateFormGUI> getAllCaCertsGUI(){
         List<CaCertificate> all = repository.findAll() as List<CaCertificate>
         return toFormGUI(all)
     }
 
+    //refactored
     void createSignedCert(NewSignedCertificateForm newSignedCertificateForm){
 
         KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance(newSignedCertificateForm.keyAlgorithm, BC_PROVIDER)
@@ -175,12 +194,12 @@ class CaVaultService {
         JcaContentSignerBuilder csrBuilder = new JcaContentSignerBuilder(newSignedCertificateForm.signatureAlgorithm).setProvider(BC_PROVIDER)
 
         // Sign the new KeyPair with the root cert Private Key
-        ContentSigner csrContentSigner = csrBuilder.build(parentCert.getPrivateKey())
+        ContentSigner csrContentSigner = csrBuilder.build(parentCert.getCertificate().getPrivateKey())
         PKCS10CertificationRequest csr = p10Builder.build(csrContentSigner)
         // Use the Signed KeyPair and CSR to generate an issued Certificate
         // Here serial number is randomly generated. In general, CAs use
         // a sequence to generate Serial number and avoid collisions
-        X500Name parentCertSubject = new X500Name(parentCert.getX509Certificate().subjectDN.toString())
+        X500Name parentCertSubject = new X500Name(parentCert.getCertificate().getX509Certificate().subjectDN.toString())
         X509v3CertificateBuilder issuedCertBuilder = new X509v3CertificateBuilder(parentCertSubject, issuedCertSerialNum, startDate, endDate, csr.getSubject(), csr.getSubjectPublicKeyInfo())
 
         JcaX509ExtensionUtils issuedCertExtUtils = new JcaX509ExtensionUtils()
@@ -194,7 +213,7 @@ class CaVaultService {
         }
 
         // Add Issuer cert identifier as Extension
-        issuedCertBuilder.addExtension(Extension.authorityKeyIdentifier, false, issuedCertExtUtils.createAuthorityKeyIdentifier(parentCert.getX509Certificate()))
+        issuedCertBuilder.addExtension(Extension.authorityKeyIdentifier, false, issuedCertExtUtils.createAuthorityKeyIdentifier(parentCert.getCertificate().getX509Certificate()))
         issuedCertBuilder.addExtension(Extension.subjectKeyIdentifier, false, issuedCertExtUtils.createSubjectKeyIdentifier(csr.getSubjectPublicKeyInfo()))
 
         // Add intended key usage extension if needed
@@ -210,13 +229,19 @@ class CaVaultService {
         X509Certificate issuedCert  = new JcaX509CertificateConverter().setProvider(BC_PROVIDER).getCertificate(issuedCertHolder)
 
         // Verify the issued cert signature against the root (issuer) cert
-        issuedCert.verify(parentCert.getX509Certificate().getPublicKey(), BC_PROVIDER)
+        issuedCert.verify(parentCert.getCertificate().getX509Certificate().getPublicKey(), BC_PROVIDER)
+
+        eu.outerheaven.certmanager.controller.entity.Certificate certificate = new eu.outerheaven.certmanager.controller.entity.Certificate(
+                privateKey: issuedCertKeyPair.getPrivate(),
+                x509Certificate: issuedCert,
+                managed: false,
+                signerCertificateId: parentCert.getCertificate().getId()
+        )
+
         if(newSignedCertificateForm.intermediate){
             CaCertificate caCertificate = new CaCertificate(
                     alias: newSignedCertificateForm.certAlias,
-                    privateKey: issuedCertKeyPair.getPrivate(),
-                    x509Certificate: issuedCert,
-                    managed: false
+                    certificate: certificate
             )
             repository.save(caCertificate)
         }
@@ -229,7 +254,8 @@ class CaVaultService {
 
     }
 
-    void renew(X509Certificate certificate, Boolean cavault, Long signerCertId, Long certificateId){
+    //Deprecated
+    void renewOld(X509Certificate certificate, Boolean cavault, Long signerCertId, Long certificateId){
         LOG.info("Starting renewal process for certificate ID {}, CaVault: {}",certificateId,cavault.toString())
         CaCertificate parentCert = repository.findById(signerCertId).get()
         Date firstDate = certificate.getNotBefore()
@@ -247,7 +273,7 @@ class CaVaultService {
         boolean[] keyUsage = certificate.getKeyUsage()
 
         try{
-            parentCert.getX509Certificate().checkValidity(endDate)
+            parentCert.getCertificate().getX509Certificate().checkValidity(endDate)
         }catch(CertificateExpiredException ignored){
             LOG.error("Unable to renew managed certificate with ID {}, the new notAfter date would be after the expiration date of the signer certificate assigned to it! ",certificateId)
             throw new Exception("ASSIGN A SIGNER CERTIFICATE THAT WILL BE VALID AT THE NEW NOTAFTER DATE FOR THE ISSUED CERTIFICATE")
@@ -275,12 +301,12 @@ class CaVaultService {
         JcaContentSignerBuilder csrBuilder = new JcaContentSignerBuilder(certificate.getSigAlgName().toString()).setProvider(BC_PROVIDER)
 
         // Sign the new KeyPair with the root cert Private Key
-        ContentSigner csrContentSigner = csrBuilder.build(parentCert.getPrivateKey())
+        ContentSigner csrContentSigner = csrBuilder.build(parentCert.getCertificate().getPrivateKey())
         PKCS10CertificationRequest csr = p10Builder.build(csrContentSigner)
         // Use the Signed KeyPair and CSR to generate an issued Certificate
         // Here serial number is randomly generated. In general, CAs use
         // a sequence to generate Serial number and avoid collisions
-        X500Name parentCertSubject = new X500Name(parentCert.getX509Certificate().subjectDN.toString())
+        X500Name parentCertSubject = new X500Name(parentCert.getCertificate().getX509Certificate().subjectDN.toString())
         X509v3CertificateBuilder issuedCertBuilder = new X509v3CertificateBuilder(parentCertSubject, issuedCertSerialNum, startDate, endDate, csr.getSubject(), csr.getSubjectPublicKeyInfo())
 
         JcaX509ExtensionUtils issuedCertExtUtils = new JcaX509ExtensionUtils()
@@ -294,7 +320,7 @@ class CaVaultService {
         }
 
         // Add Issuer cert identifier as Extension
-        issuedCertBuilder.addExtension(Extension.authorityKeyIdentifier, false, issuedCertExtUtils.createAuthorityKeyIdentifier(parentCert.getX509Certificate()))
+        issuedCertBuilder.addExtension(Extension.authorityKeyIdentifier, false, issuedCertExtUtils.createAuthorityKeyIdentifier(parentCert.getCertificate().getX509Certificate()))
         issuedCertBuilder.addExtension(Extension.subjectKeyIdentifier, false, issuedCertExtUtils.createSubjectKeyIdentifier(csr.getSubjectPublicKeyInfo()))
 
         // Add intended key usage extension if needed
@@ -320,43 +346,135 @@ class CaVaultService {
         X509Certificate issuedCert  = new JcaX509CertificateConverter().setProvider(BC_PROVIDER).getCertificate(issuedCertHolder)
 
         // Verify the issued cert signature against the root (issuer) cert
-        issuedCert.verify(parentCert.getX509Certificate().getPublicKey(), BC_PROVIDER)
+        issuedCert.verify(parentCert.getCertificate().getX509Certificate().getPublicKey(), BC_PROVIDER)
         //writeCertToFileBase64Encoded(issuedCert, "re-issued-cert.cer")
         //exportKeyPairToKeystoreFile(issuedCertKeyPair, issuedCert, "re-issued-cert", "issued-cert.pfx", "PKCS12", "password")
         if(cavault){
             CaCertificate tosave = repository.findById(certificateId).get()
+            eu.outerheaven.certmanager.controller.entity.Certificate cert
             tosave.setPrivateKey(issuedCertKeyPair.getPrivate())
             tosave.setX509Certificate(issuedCert)
             repository.save(tosave)
         }else{
-            eu.outerheaven.certmanager.controller.entity.Certificate tosave = certificateRepository.findById(certificateId).get()
-            tosave.setPrivateKey(issuedCertKeyPair.getPrivate())
-            tosave.setX509Certificate(issuedCert)
-            certificateRepository.save(tosave)
+            LOG.info("Well fuck not implemented yet")
         }
         LOG.info("Finished renewal process!")
     }
 
-    void renewCaCertificate(List<CaCertificateFormGUI>  caCertificateFormGUI){
-        caCertificateFormGUI.forEach(r->{
-            CaCertificate caCertificate = repository.findById(r.id).get()
-            renew(caCertificate.getX509Certificate(), true, caCertificate.getSignerCertificateId(), r.getId())
-        })
-    }
+    //Refactored
+    void renew(eu.outerheaven.certmanager.controller.entity.Certificate certificateToRenew){
+        LOG.info("Starting renewal process for certificate with ID ", certificateToRenew.getId())
+        CaCertificate parentCert = repository.findById(certificateToRenew.getSignerCertificateId()).get()
+        X509Certificate certificate = certificateToRenew.getX509Certificate()
+        Date firstDate = certificate.getNotBefore()
+        Date secondDate = certificate.getNotAfter()
 
-    void renewCertificate(List<CertificateFormGUI> certificateFormGUIS){
-        certificateFormGUIS.forEach(r->{
-            eu.outerheaven.certmanager.controller.entity.Certificate certificate = certificateRepository.findById(r.id).get()
-            renew(certificate.getX509Certificate(),false,certificate.getSignerCertificateId(),certificate.getId())
-        })
-    }
+        long diffInMillies = Math.abs(secondDate.getTime() - firstDate.getTime());
+        long diff = TimeUnit.DAYS.convert(diffInMillies, TimeUnit.MILLISECONDS);
 
+        Calendar calendar = Calendar.getInstance();
+        calendar.add(Calendar.DATE, diff.toInteger());
+
+        Date startDate = new Date()
+        Date endDate = calendar.getTime();
+        boolean[] keyUsage = certificate.getKeyUsage()
+
+        try{
+            parentCert.getCertificate().getX509Certificate().checkValidity(endDate)
+        }catch(CertificateExpiredException ignored){
+            LOG.error("Unable to renew managed certificate with ID {}, the new notAfter date would be after the expiration date of the signer certificate assigned to it! ",certificateId)
+            throw new Exception("ASSIGN A SIGNER CERTIFICATE THAT WILL BE VALID AT THE NEW NOTAFTER DATE FOR THE ISSUED CERTIFICATE")
+        }catch(CertificateNotYetValidException exception){
+            LOG.debug("Exception: ", exception)
+            throw new Exception("SIGNER CERTIFICATE NOT YET VALID")
+        }
+
+
+        //KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance(certificate.getSigAlgName().toString(), BC_PROVIDER)
+        KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance(certificate.getPublicKey().getAlgorithm(), BC_PROVIDER)
+        //CAST public key to RSA public to get modulus/keysize
+        RSAPublicKey pub = (RSAPublicKey) certificate.getPublicKey()
+        keyPairGenerator.initialize(pub.getModulus().bitLength())
+
+        // Generate a new KeyPair and sign it using the Root Cert Private Key
+        // by generating a CSR (Certificate Signing Request)
+        String issuedSubject = certificate.subjectDN.toString()
+
+        X500Name issuedCertSubject = new X500Name(issuedSubject)
+        BigInteger issuedCertSerialNum = new BigInteger(Long.toString(new SecureRandom().nextLong()))
+        KeyPair issuedCertKeyPair = keyPairGenerator.generateKeyPair()
+
+        PKCS10CertificationRequestBuilder p10Builder = new JcaPKCS10CertificationRequestBuilder(issuedCertSubject, issuedCertKeyPair.getPublic())
+        JcaContentSignerBuilder csrBuilder = new JcaContentSignerBuilder(certificate.getSigAlgName().toString()).setProvider(BC_PROVIDER)
+
+        // Sign the new KeyPair with the root cert Private Key
+        ContentSigner csrContentSigner = csrBuilder.build(parentCert.getCertificate().getPrivateKey())
+        PKCS10CertificationRequest csr = p10Builder.build(csrContentSigner)
+        // Use the Signed KeyPair and CSR to generate an issued Certificate
+        // Here serial number is randomly generated. In general, CAs use
+        // a sequence to generate Serial number and avoid collisions
+        X500Name parentCertSubject = new X500Name(parentCert.getCertificate().getX509Certificate().subjectDN.toString())
+        X509v3CertificateBuilder issuedCertBuilder = new X509v3CertificateBuilder(parentCertSubject, issuedCertSerialNum, startDate, endDate, csr.getSubject(), csr.getSubjectPublicKeyInfo())
+
+        JcaX509ExtensionUtils issuedCertExtUtils = new JcaX509ExtensionUtils()
+
+        // Add Extensions
+        // Use BasicConstraints to say that this Cert is not a CA
+        if(keyUsage[5]){
+            issuedCertBuilder.addExtension(Extension.basicConstraints, true, new BasicConstraints(true))
+        }else {
+            issuedCertBuilder.addExtension(Extension.basicConstraints, true, new BasicConstraints(false))
+        }
+
+        // Add Issuer cert identifier as Extension
+        issuedCertBuilder.addExtension(Extension.authorityKeyIdentifier, false, issuedCertExtUtils.createAuthorityKeyIdentifier(parentCert.getCertificate().getX509Certificate()))
+        issuedCertBuilder.addExtension(Extension.subjectKeyIdentifier, false, issuedCertExtUtils.createSubjectKeyIdentifier(csr.getSubjectPublicKeyInfo()))
+
+        // Add intended key usage extension if needed
+        issuedCertBuilder.addExtension(Extension.keyUsage, false, new KeyUsage(KeyUsage.keyEncipherment))
+
+        // Add DNS name is cert is to used for SSL
+        if(certificate.getSubjectAlternativeNames().getAt(2).toString() != null && certificate.getSubjectAlternativeNames().getAt(7).toString() != null ){
+            issuedCertBuilder.addExtension(Extension.subjectAlternativeName, false, new DERSequence(new ASN1Encodable[] {
+                    new GeneralName(GeneralName.dNSName, getAlternateNames(certificate,2)),
+                    new GeneralName(GeneralName.iPAddress, getAlternateNames(certificate,7))
+            }))
+        }else if(certificate.getSubjectAlternativeNames().getAt(2)!= null){
+            issuedCertBuilder.addExtension(Extension.subjectAlternativeName, false, new DERSequence(new ASN1Encodable[] {
+                    new GeneralName(GeneralName.dNSName, getAlternateNames(certificate,2)),
+            }))
+        }else if(certificate.getSubjectAlternativeNames().getAt(7) != null){
+            issuedCertBuilder.addExtension(Extension.subjectAlternativeName, false, new DERSequence(new ASN1Encodable[] {
+                    new GeneralName(GeneralName.iPAddress, getAlternateNames(certificate,7))
+            }))
+        }
+
+        X509CertificateHolder issuedCertHolder = issuedCertBuilder.build(csrContentSigner)
+        X509Certificate issuedCert  = new JcaX509CertificateConverter().setProvider(BC_PROVIDER).getCertificate(issuedCertHolder)
+
+        // Verify the issued cert signature against the root (issuer) cert
+        issuedCert.verify(parentCert.getCertificate().getX509Certificate().getPublicKey(), BC_PROVIDER)
+        //writeCertToFileBase64Encoded(issuedCert, "re-issued-cert.cer")
+        //exportKeyPairToKeystoreFile(issuedCertKeyPair, issuedCert, "re-issued-cert", "issued-cert.pfx", "PKCS12", "password")
+
+        List<CaCertificate> caCertificates = repository.findByCertificate(certificateToRenew)
+        List<StandaloneCertificate> standaloneCertificates = standaloneCertificateRepository.findByCertificate(certificateToRenew)
+        List<KeystoreCertificate> keystoreCertificates = keystoreCertificateRepository.findByCertificate(certificateToRenew)
+        //TODO IMPLEMENT STANDALONE AND KEYSTORE REPLACEMENT PROPAGATION
+        certificateToRenew.setX509Certificate(issuedCert)
+        certificateToRenew.setPrivateKey(issuedCertKeyPair.getPrivate())
+        certificateRepository.save(certificateToRenew)
+        LOG.info("Finished renewal process!")
+    }
+    //Refactored?
     void assignSignerCaCert(Long signerCertificateId, List<CaCertificateFormGUI>  caCertificateFormGUI){
+        CaCertificate signerCertificate = repository.findById(signerCertificateId).get()
         caCertificateFormGUI.forEach(r->{
             CaCertificate caCertificate = repository.findById(r.getId()).get()
-            caCertificate.setSignerCertificateId(signerCertificateId)
-            caCertificate.setManaged(true)
-            repository.save(caCertificate)
+            eu.outerheaven.certmanager.controller.entity.Certificate cert = caCertificate.getCertificate()
+            cert.setSignerCertificateId(signerCertificate.getCertificate().getId())
+            certificateRepository.save(cert)
+            //repository.save(caCertificate)
         })
     }
 
@@ -449,7 +567,7 @@ class CaVaultService {
         exportKeyPairToKeystoreFile(issuedCertKeyPair, issuedCert, "issued-cert", "issued-cert.pfx", "PKCS12", "pass")
         LOG.info("CA signed cert has been created")
     }
-
+    //Refactored
     void exportKeyPairToKeystoreFile(KeyPair keyPair, Certificate certificate, String alias, String fileName, String storeType, String storePass) throws Exception {
         KeyStore sslKeyStore = KeyStore.getInstance(storeType, BC_PROVIDER)
         sslKeyStore.load(null, null)
@@ -460,7 +578,7 @@ class CaVaultService {
         getKeyPairFromKeystore(alias,fileName,storeType,storePass)
 
     }
-
+    //Refactored
     void writeCertToFileBase64Encoded(Certificate certificate, String fileName) throws Exception {
         FileOutputStream certificateOut = new FileOutputStream(fileName)
         String certData = new String(Base64.encode(certificate.getEncoded()))
@@ -471,7 +589,7 @@ class CaVaultService {
         certificateOut.write("\n-----END CERTIFICATE-----".getBytes())
         certificateOut.close()
     }
-
+    //Refactored
     void getKeyPairFromKeystore(String alias, String fileName, String storeType, String storePass){
         KeyStore sslKeystore = KeyStore.getInstance(storeType, BC_PROVIDER)
         InputStream inputstream = new FileInputStream(fileName)
@@ -479,10 +597,10 @@ class CaVaultService {
         Key key = sslKeystore.getKey(alias)
         LOG.info("Read private key is: " + key)
     }
-
+    //Refactored
     CaCertificateFormGUI toFormGUI(CaCertificate caCertificate){
         String level
-        if(caCertificate.x509Certificate.issuerDN == caCertificate.getX509Certificate().subjectDN){
+        if(caCertificate.getCertificate().x509Certificate.issuerDN == caCertificate.getCertificate().getX509Certificate().subjectDN){
             level = "ROOT"
         }else{
             level="INTERMEDIATE"
@@ -490,24 +608,24 @@ class CaVaultService {
         CaCertificateFormGUI caCertificateFormGUI = new CaCertificateFormGUI(
                 id: caCertificate.id,
                 alias: caCertificate.alias,
-                managed: caCertificate.managed,
-                status: certStatus(caCertificate.getX509Certificate().notBefore,caCertificate.getX509Certificate().notAfter),
+                managed: caCertificate.getCertificate().managed,
+                status: certStatus(caCertificate.getCertificate().getX509Certificate().notBefore,caCertificate.getCertificate().getX509Certificate().notAfter),
                 level: level,
-                subject: caCertificate.getX509Certificate().subjectDN,
-                issuer: caCertificate.getX509Certificate().issuerDN,
-                validFrom: caCertificate.getX509Certificate().notBefore,
-                validTo: caCertificate.getX509Certificate().notAfter,
-                serial: caCertificate.getX509Certificate().serialNumber
+                subject: caCertificate.getCertificate().getX509Certificate().subjectDN,
+                issuer: caCertificate.getCertificate().getX509Certificate().issuerDN,
+                validFrom: caCertificate.getCertificate().getX509Certificate().notBefore,
+                validTo: caCertificate.getCertificate().getX509Certificate().notAfter,
+                serial: caCertificate.getCertificate().getX509Certificate().serialNumber
         )
         return caCertificateFormGUI
     }
-
+    //Refactored
     List<CaCertificateFormGUI> toFormGUI(List<CaCertificate> caCertificates){
         List<CaCertificateFormGUI> certificateFormGUIS = new ArrayList<>()
         caCertificates.forEach(r->certificateFormGUIS.add(toFormGUI(r)))
         return certificateFormGUIS
     }
-
+    //Refactored
     String certStatus(Date notBefore, Date notAfter){
         String status
         Instant instant = Instant.ofEpochMilli(notBefore.getTime())
@@ -528,7 +646,7 @@ class CaVaultService {
 
         return status
     }
-
+    //Refactored
     String getCleanCertName(Long certificateId){
         CaCertificate caCertificate = repository.findById(certificateId).get()
         String filename =""
@@ -541,7 +659,7 @@ class CaVaultService {
 
         return filename
     }
-
+    //Refactored
     Resource exportAsPem(Long certificateId, String filename){
         CertificateLoader certificateLoader = new CertificateLoader()
         String folderName = certificateLoader.generateRandomName()
@@ -553,9 +671,9 @@ class CaVaultService {
         try{
             new File(path.toString()).mkdirs()
             CaCertificate caCertificate = repository.findById(certificateId).get()
-            certificateLoader.writeCertToFileBase64Encoded(caCertificate.getX509Certificate(),folderName + "/" + filename)
-            if(caCertificate.privateKey != null){
-                certificateLoader.writeKeyToFileBase64Encoded(caCertificate.getPrivateKey(), folderName + "/" + filename)
+            certificateLoader.writeCertToFileBase64Encoded(caCertificate.getCertificate().getX509Certificate(),folderName + "/" + filename)
+            if(caCertificate.getCertificate().privateKey != null){
+                certificateLoader.writeKeyToFileBase64Encoded(caCertificate.getCertificate().getPrivateKey(), folderName + "/" + filename)
             }
             String fullPath =  "./" + folderName + "/" + filename
             LOG.info("Path to the file is " + fullPath)
@@ -571,51 +689,63 @@ class CaVaultService {
             LOG.error("Failed exporting certificate:" + exception)
         }
     }
-
+    //Refactored?
     void importCertificate(CertificateImportDto certificateImportDto){
-        List<CaCertificate> certificates
+        List<CaCertificate> certificates = new ArrayList<>()
         CertificateLoader certificateLoader = new CertificateLoader()
         if(certificateImportDto.getImportFormat() == "PEM"){
-            certificates = certToCaCert(certificateLoader.decodeImportPem(certificateImportDto.getBase64File(), certificateImportDto.getFilename()))
+            List<eu.outerheaven.certmanager.controller.entity.Certificate> tmpcertificates = certificateLoader.decodeImportPem(certificateImportDto.getBase64File(), certificateImportDto.getFilename())
+            tmpcertificates.forEach(r->{
+                CaCertificate tmp = new CaCertificate(
+                        alias: "IMPORTED_CHANGE_ME",
+                        certificate: r
+                )
+                certificates.add(tmp)
+            })
         }else {
-            certificates = certToCaCert(certificateLoader.decodeImportPCKS12(certificateImportDto.getBase64File(), certificateImportDto.getPassword()))
-            //LOG.info("Well fuck seems like the developer hasnt implemented this yet")
+            List<KeystoreCertificate> tmpcertificates = certificateLoader.decodeImportPCKS12(certificateImportDto.getBase64File(), certificateImportDto.getPassword())
+            tmpcertificates.forEach(r->{
+                CaCertificate tmp = new CaCertificate(
+                        alias: "IMPORTED_CHANGE_ME",
+                        certificate: r.certificate
+                )
+                certificates.add(tmp)
+            })
         }
         certificates.forEach(r->{repository.save(r)})
 
     }
-
+    //TODO this shit, first fix cert loader
     void replaceCertificate(CertificateImportDto certificateImportDto, Long certId){
         List<CaCertificate> caCertificates = new ArrayList<>()
         CertificateLoader certificateLoader = new CertificateLoader()
         caCertificates = certToCaCert(certificateLoader.decodeImportPem(certificateImportDto.getBase64File(), certificateImportDto.getFilename()))
         if(caCertificates.size()>1) throw new Exception("Cannot replace one certificate with multiple ones!")
         CaCertificate caCertificate = repository.findById(certId).get()
+        eu.outerheaven.certmanager.controller.entity.Certificate certificate = caCertificate.getCertificate()
+        certificate.setX509Certificate(caCertificates.get(0).x509Certificate)
         caCertificate.setX509Certificate(caCertificates.get(0).x509Certificate)
         caCertificate.setPrivateKey(caCertificates.get(0).privateKey)
         repository.save(caCertificate)
     }
 
-    private CaCertificate certToCaCert(eu.outerheaven.certmanager.controller.entity.Certificate certificate){
-        CaCertificate caCertificate = new CaCertificate(
-                alias: certificate.alias,
-                privateKey: certificate.privateKey,
-                x509Certificate: certificate.x509Certificate,
-                managed: certificate.managed,
-        )
-        return caCertificate
-    }
-
-    private List<CaCertificate> certToCaCert(List<eu.outerheaven.certmanager.controller.entity.Certificate> certificates){
-        List<CaCertificate> caCertificates = new ArrayList<>()
-        certificates.forEach(r->{caCertificates.add(certToCaCert(r))})
-        return caCertificates
-    }
-
-    void remove(List<CaCertificateFormGUI> certificateFormGUIS){
-        certificateFormGUIS.forEach(r->{
-            repository.deleteById(r.id)
+    //Goes over
+    List<CaCertificate> purgeCertDuplicates(List<CaCertificate> certificates){
+        List<CaCertificate> purgedList = new ArrayList<>()
+        certificates.forEach(r-> {
+            eu.outerheaven.certmanager.controller.entity.Certificate cert = certificateRepository.findByX509Certificate(r.getCertificate().x509Certificate)
+            if(cert == null){
+                purgedList.add(r)
+            }else{
+                CaCertificate newcert = new CaCertificate(
+                        alias: r.alias,
+                        certificate: cert,
+                )
+                purgedList.add(newcert)
+            }
         })
+
+        return purgedList
     }
 
     @Transactional
@@ -635,11 +765,11 @@ class CaVaultService {
                 boolean alreadyExpired=false
                 boolean renewed = false
                 try{
-                    r.getX509Certificate().checkValidity(date)
+                    r.getCertificate().getX509Certificate().checkValidity(date)
                 }catch(CertificateExpiredException exception){
-                    if(r.managed){
+                    if(r.getCertificate().managed){
                         LOG.info("Renewing certificate in CA vault with alias {} and ID {}", r.alias,r.id)
-                        renew(r.getX509Certificate(),true,r.getSignerCertificateId(),r.id)
+                        renew(r.getCertificate())
                         renewed = true
                     }else if(!renewed){
                         expiredCertificates.add(r)
@@ -652,7 +782,7 @@ class CaVaultService {
                 }
                 if(!alreadyExpired || !renewed){
                     try{
-                        r.getX509Certificate().checkValidity(currentDatePlus)
+                        r.getCertificate().getX509Certificate().checkValidity(currentDatePlus)
                     }catch(CertificateExpiredException exception){
                         soonToExpireCertificates.add(r)
                         LOG.warn("Certificate with alias {} is within expiration warning period!", r.getAlias())
