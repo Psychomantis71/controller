@@ -712,6 +712,7 @@ class CaVaultService {
                 certificates.add(tmp)
             })
         }
+        certificates = purgeCertDuplicates(certificates)
         certificates.forEach(r->{repository.save(r)})
 
     }

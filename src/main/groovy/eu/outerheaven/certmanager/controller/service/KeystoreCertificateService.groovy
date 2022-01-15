@@ -1,15 +1,20 @@
 package eu.outerheaven.certmanager.controller.service
 
+import com.sun.corba.se.impl.oa.poa.ActiveObjectMap
 import eu.outerheaven.certmanager.controller.dto.CertificateDto
 import eu.outerheaven.certmanager.controller.dto.CertificateImportDto
+import eu.outerheaven.certmanager.controller.dto.KeystoreCertificateDto
+import eu.outerheaven.certmanager.controller.entity.CaCertificate
 import eu.outerheaven.certmanager.controller.entity.Certificate
 import eu.outerheaven.certmanager.controller.entity.Instance
 import eu.outerheaven.certmanager.controller.entity.Keystore
 import eu.outerheaven.certmanager.controller.entity.KeystoreCertificate
 import eu.outerheaven.certmanager.controller.form.CertificateFormGUI
 import eu.outerheaven.certmanager.controller.form.KeystoreFormGUI
+import eu.outerheaven.certmanager.controller.repository.CaCertificateRepository
 import eu.outerheaven.certmanager.controller.repository.CertificateRepository
 import eu.outerheaven.certmanager.controller.repository.InstanceRepository
+import eu.outerheaven.certmanager.controller.repository.KeystoreCertificateRepository
 import eu.outerheaven.certmanager.controller.repository.KeystoreRepository
 import eu.outerheaven.certmanager.controller.util.CertificateLoader
 import eu.outerheaven.certmanager.controller.util.PreparedRequest
@@ -17,6 +22,7 @@ import org.apache.tomcat.util.http.fileupload.FileUtils
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.core.env.Environment
 import org.springframework.core.io.ByteArrayResource
 import org.springframework.core.io.Resource
 import org.springframework.http.HttpEntity
@@ -44,16 +50,26 @@ class KeystoreCertificateService {
     private final InstanceRepository instanceRepository
 
     @Autowired
-    private final CertificateRepository repository
+    private final CertificateRepository certificateRepository
+
+    @Autowired
+    private final CaCertificateRepository caCertificateRepository
+
+    @Autowired
+    private final KeystoreCertificateRepository repository
+
+    @Autowired
+    private Environment environment
 
     String api_url="/api/certificate"
 
+    //Refactored
     CertificateFormGUI toFormGUI(KeystoreCertificate certificate){
         Keystore keystore = keystoreRepository.findById(certificate.getKeystoreId()).get()
         Instance instance = instanceRepository.findById(keystore.getInstance().getId()).get()
-        String status = certStatus(certificate.getCertificate().getX509Certificate().getNotBefore(), certificate.getX509Certificate().getNotAfter())
+        String status = certStatus(certificate.getCertificate().getX509Certificate().getNotBefore(), certificate.getCertificate().getX509Certificate().getNotAfter())
         Boolean pk=false
-        if(certificate.getPrivateKey() != null){
+        if(certificate.getCertificate().getPrivateKey() != null){
             pk=true
         }
         CertificateFormGUI certificateFormGUI = new CertificateFormGUI(
@@ -62,30 +78,30 @@ class KeystoreCertificateService {
                 keystorePath: keystore.location,
                 instanceName: instance.name,
                 hostname: instance.hostname,
-                managed: certificate.managed,
-                subject: certificate.getX509Certificate().subjectDN,
-                issuer: certificate.getX509Certificate().issuerDN,
-                validFrom: certificate.getX509Certificate().notBefore,
-                validTo: certificate.getX509Certificate().notAfter,
-                serial: certificate.getX509Certificate().serialNumber,
+                managed: certificate.getCertificate().managed,
+                subject: certificate.getCertificate().getX509Certificate().subjectDN,
+                issuer: certificate.getCertificate().getX509Certificate().issuerDN,
+                validFrom: certificate.getCertificate().getX509Certificate().notBefore,
+                validTo: certificate.getCertificate().getX509Certificate().notAfter,
+                serial: certificate.getCertificate().getX509Certificate().serialNumber,
                 status: status,
                 privateKey: pk
         )
         return certificateFormGUI
     }
-
-    ArrayList<CertificateFormGUI> toFormGUI(ArrayList<Certificate> certificates){
+    //Refactored
+    ArrayList<CertificateFormGUI> toFormGUI(ArrayList<KeystoreCertificate> certificates){
         ArrayList<CertificateFormGUI> certificateFormGUIS = new ArrayList<>()
         certificates.forEach(r ->certificateFormGUIS.add(toFormGUI(r)))
         return certificateFormGUIS
     }
-
+    //Refactored
     ArrayList<CertificateFormGUI> getAllGUI(){
-        ArrayList<Certificate> certificates = repository.findAll() as ArrayList<Certificate>
+        ArrayList<KeystoreCertificate> certificates = repository.findAll() as ArrayList<KeystoreCertificate>
         ArrayList<CertificateFormGUI> certificateFormGUIS = toFormGUI(certificates)
         return certificateFormGUIS
     }
-
+    //TODO this needs to fetch parameter from config file
     void fetchCert(){
         /*PreparedRequest preparedRequest = new PreparedRequest()
         RestTemplate restTemplate = new RestTemplate();
@@ -105,7 +121,6 @@ class KeystoreCertificateService {
          */
 
     }
-
     String certStatus(Date notBefore, Date notAfter){
         String status
         Instant instant = Instant.ofEpochMilli(notBefore.getTime())
@@ -126,9 +141,9 @@ class KeystoreCertificateService {
 
         return status
     }
-
+    //Refactored
     String getCleanCertName(Long certificateId){
-        Certificate certificate = repository.findById(certificateId).get()
+        KeystoreCertificate certificate = repository.findById(certificateId).get()
         String filename =""
         if(certificate.getAlias() == null){
             filename ="certificate.cer"
@@ -139,7 +154,7 @@ class KeystoreCertificateService {
 
         return filename
     }
-
+    //Refactored
     Resource exportAsPem(Long certificateId, String filename){
         CertificateLoader certificateLoader = new CertificateLoader()
         String folderName = certificateLoader.generateRandomName()
@@ -150,10 +165,10 @@ class KeystoreCertificateService {
         }
         try{
             new File(path.toString()).mkdirs()
-            Certificate certificate = repository.findById(certificateId).get()
-            certificateLoader.writeCertToFileBase64Encoded(certificate.getX509Certificate(),folderName + "/" + filename)
-            if(certificate.privateKey != null){
-                certificateLoader.writeKeyToFileBase64Encoded(certificate.getPrivateKey(), folderName + "/" + filename)
+            KeystoreCertificate certificate = repository.findById(certificateId).get()
+            certificateLoader.writeCertToFileBase64Encoded(certificate.getCertificate().getX509Certificate(),folderName + "/" + filename)
+            if(certificate.getCertificate().privateKey != null){
+                certificateLoader.writeKeyToFileBase64Encoded(certificate.getCertificate().getPrivateKey(), folderName + "/" + filename)
             }
             String fullPath =  "./" + folderName + "/" + filename
             LOG.info("Path to the file is " + fullPath)
@@ -169,34 +184,44 @@ class KeystoreCertificateService {
             LOG.error("Failed exporting certificate:" + exception)
         }
     }
-
+    //Refactored
     void importCertificate(CertificateImportDto certificateImportDto){
-        List<Certificate> certificates
+        List<KeystoreCertificate> keystoreCertificates = new ArrayList<>()
         CertificateLoader certificateLoader = new CertificateLoader()
         if(certificateImportDto.getImportFormat() == "PEM"){
+            List<Certificate> certificates
             certificates = certificateLoader.decodeImportPem(certificateImportDto.getBase64File(), certificateImportDto.getFilename())
+            certificates.forEach(r->{
+                KeystoreCertificate keystoreCertificate = new KeystoreCertificate(
+                        alias: "IMPORTED_CHANGE_ME",
+                        certificate: r,
+                )
+                keystoreCertificates.add(keystoreCertificate)
+            })
         }else {
-            certificates = certificateLoader.decodeImportPCKS12(certificateImportDto.getBase64File(), certificateImportDto.getPassword())
+            keystoreCertificates = certificateLoader.decodeImportPCKS12(certificateImportDto.getBase64File(), certificateImportDto.getPassword())
             //LOG.info("Well fuck seems like the developer hasnt implemented this yet")
         }
-        propCertToAgents(certificates,certificateImportDto.getSelectedKeystores())
+        propCertToAgents(keystoreCertificates,certificateImportDto.getSelectedKeystores())
 
     }
 
-    void propCertToAgents(List<Certificate> certificates, List<KeystoreFormGUI> keystoreFormGUIS){
+    //TODO CertificateDto has been replaced by KeystoreCertificateDto, this needs to be changed on the agent side too
+    //Refactored
+    void propCertToAgents(List<KeystoreCertificate> certificates, List<KeystoreFormGUI> keystoreFormGUIS){
         List<Keystore> keystores = new ArrayList<>()
         keystoreFormGUIS.forEach(r->{
             Keystore keystore = keystoreRepository.findById(r.getId()).get()
             keystores.add(keystore)
         })
 
-        List<CertificateDto> certificateDtos = toDto(certificates)
+        List<KeystoreCertificateDto> keystoreCertificateDtos = toDto(certificates)
 
         for(int i=0; i<keystores.size();i++){
-            Instance instance = instanceRepository.findById(keystores.get(i).getInstanceId()).get()
+            Instance instance = keystores.get(i).getInstance()
             PreparedRequest preparedRequest = new PreparedRequest()
             RestTemplate restTemplate = new RestTemplate();
-            HttpEntity<List<CertificateDto>> request = new HttpEntity<>(certificateDtos, preparedRequest.getHeader(instance));
+            HttpEntity<List<KeystoreCertificateDto>> request = new HttpEntity<>(keystoreCertificateDtos, preparedRequest.getHeader(instance));
             ResponseEntity<String> response
             try{
                 response = restTemplate.postForEntity(instance.getAccessUrl() + api_url + "/addToKeystore/" + keystores.get(i).getAgentId(), request, String.class)
@@ -208,22 +233,22 @@ class KeystoreCertificateService {
 
         }
     }
-
+    //Refactored
     void delete(List<CertificateFormGUI> certificateFormGUIS){
-        List <Certificate> certificates = new ArrayList<>()
+        List <KeystoreCertificate> certificates = new ArrayList<>()
         certificateFormGUIS.forEach(r->{
-            Certificate certificate = repository.findById(r.id).get()
+            KeystoreCertificate certificate = repository.findById(r.id).get()
             certificates.add(certificate)
         })
         certificates.forEach(r->{
             Keystore keystore = keystoreRepository.findById(r.getKeystoreId()).get()
-            Instance instance = instanceRepository.findById(keystore.getInstanceId()).get()
+            Instance instance = keystore.getInstance()
             PreparedRequest preparedRequest = new PreparedRequest()
             RestTemplate restTemplate = new RestTemplate();
             HttpEntity request = new HttpEntity<>(preparedRequest.getHeader(instance))
 
             ResponseEntity response = restTemplate.exchange(
-                    instance.getAccessUrl() + api_url + "/" + r.getAgent_id(),
+                    instance.getAccessUrl() + api_url + "/" + r.getKeystoreId(),
                     HttpMethod.DELETE,
                     request,
                     String.class
@@ -237,31 +262,30 @@ class KeystoreCertificateService {
             repository.delete(r)
             *
              */
-            LOG.info("Deleted certificate with alias {}, subject DN {} in keystore {} on instance {}", r.getAlias(),r.getX509Certificate().getSubjectDN(),keystore.getLocation(),instance.getName())
+            LOG.info("Deleted certificate with alias {}, subject DN {} in keystore {} on instance {}", r.getAlias(),r.getCertificate().getX509Certificate().getSubjectDN(),keystore.getLocation(),instance.getName())
 
         })
     }
 
-    CertificateDto toDto(Certificate certificate){
+    //Refactored all below
+    KeystoreCertificateDto toDto(KeystoreCertificate keystoreCertificate){
         CertificateLoader certificateLoader = new CertificateLoader()
-        CertificateDto certificateDto = new CertificateDto(
-                id: certificate.id,
-                agent_id: certificate.agent_id,
-                alias: certificate.alias,
-                key: certificateLoader.encodeKey(certificate.privateKey),
-                encodedX509: certificateLoader.encodeX509(certificate.x509Certificate),
-                managed: certificate.managed,
-                keystoreId: certificate.keystoreId
+        KeystoreCertificateDto keystoreCertificateDto = new KeystoreCertificateDto(
+                id: keystoreCertificate.id,
+                agentId: keystoreCertificate.agentId,
+                alias: keystoreCertificate.alias,
+                certificateDto: certificateToCertificateDto(keystoreCertificate.certificate),
+                keystoreId: keystoreCertificate.keystoreId
         )
-        return certificateDto
+        return keystoreCertificateDto
     }
 
-    List<CertificateDto> toDto(List<Certificate> certificates){
-        List<CertificateDto> certificateDtos = new ArrayList<>()
+    List<KeystoreCertificateDto> toDto(List<KeystoreCertificate> certificates){
+        List<KeystoreCertificateDto> keystoreCertificateDtos = new ArrayList<>()
         certificates.forEach(r->{
-            certificateDtos.add(toDto(r))
+            keystoreCertificateDtos.add(toDto(r))
         })
-        return certificateDtos
+        return keystoreCertificateDtos
     }
 
     void assignSignerCert(Long signerCertificateId, List<CertificateFormGUI>  certificateFormGUIS){
@@ -273,6 +297,49 @@ class KeystoreCertificateService {
         })
     }
 
+    KeystoreCertificate purgeCertDuplicates(KeystoreCertificate keystoreCertificate){
+        Certificate certificate = certificateRepository.findByX509Certificate(keystoreCertificate.getCertificate().getX509Certificate())
+        if(certificate == null){
+            if(environment.getProperty("controller.auto.assign.ca").toBoolean()){
+                keystoreCertificate = findAndAssignCa(keystoreCertificate)
+            }
+        }else{
+            keystoreCertificate.setCertificate(certificate)
+        }
+        return keystoreCertificate
+    }
 
+    List<KeystoreCertificate> purgeCertDuplicates(List<KeystoreCertificate> keystoreCertificates){
+        List<KeystoreCertificate> keystoreCertificatesPurged = new ArrayList<>()
+        for(int i=0;i<keystoreCertificates.size();i++){
+            keystoreCertificates.add(keystoreCertificates.get(i))
+        }
+        return keystoreCertificatesPurged
+    }
+
+    KeystoreCertificate findAndAssignCa(KeystoreCertificate keystoreCertificate){
+        List<CaCertificate> caCertificates = caCertificateRepository.findAll() as List<CaCertificate>
+        caCertificates.forEach(r->{
+            if(r.getCertificate().getX509Certificate().getSubjectDN() == keystoreCertificate.getCertificate().getX509Certificate().getIssuerDN()){
+                try{
+                    keystoreCertificate.getCertificate().getX509Certificate().verify(r.getCertificate().getX509Certificate().getPublicKey(), "BC")
+                    keystoreCertificate.getCertificate().setSignerCertificateId(r.getId())
+                    return keystoreCertificate
+                }catch(Exception ignored){
+                }
+            }
+        })
+        return keystoreCertificate
+    }
+
+    CertificateDto certificateToCertificateDto(Certificate certificate){
+        CertificateLoader certificateLoader = new CertificateLoader()
+        CertificateDto certificateDto = new CertificateDto(
+                id: certificate.id,
+                encodedX509Certificate: certificateLoader.encodeX509(certificate.x509Certificate),
+                encodedPrivateKey: certificateLoader.encodeKey(certificate.privateKey)
+        )
+        return certificateDto
+    }
 
 }

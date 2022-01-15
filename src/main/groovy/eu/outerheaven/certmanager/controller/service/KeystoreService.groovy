@@ -1,16 +1,19 @@
 package eu.outerheaven.certmanager.controller.service
 
 import eu.outerheaven.certmanager.controller.dto.CertificateDto
+import eu.outerheaven.certmanager.controller.dto.KeystoreCertificateDto
 import eu.outerheaven.certmanager.controller.dto.KeystoreDto
 import eu.outerheaven.certmanager.controller.entity.Certificate
 import eu.outerheaven.certmanager.controller.entity.Instance
 import eu.outerheaven.certmanager.controller.entity.Keystore
+import eu.outerheaven.certmanager.controller.entity.KeystoreCertificate
 import eu.outerheaven.certmanager.controller.entity.User
 import eu.outerheaven.certmanager.controller.form.KeystoreForm
 import eu.outerheaven.certmanager.controller.form.KeystoreFormGUI
 import eu.outerheaven.certmanager.controller.form.RetrieveFromPortForm
 import eu.outerheaven.certmanager.controller.repository.CertificateRepository
 import eu.outerheaven.certmanager.controller.repository.InstanceRepository
+import eu.outerheaven.certmanager.controller.repository.KeystoreCertificateRepository
 import eu.outerheaven.certmanager.controller.repository.KeystoreRepository
 import eu.outerheaven.certmanager.controller.repository.UserRepository
 import eu.outerheaven.certmanager.controller.util.CertificateLoader
@@ -46,6 +49,9 @@ class KeystoreService {
     private final KeystoreRepository repository
 
     @Autowired
+    private final KeystoreCertificateRepository keystoreCertificateRepository
+
+    @Autowired
     private final InstanceRepository instanceRepository
 
     @Autowired
@@ -63,6 +69,7 @@ class KeystoreService {
     @Autowired
     private Environment environment
 
+    //Refactored
     ArrayList<KeystoreForm> getAll(){
         ArrayList<Keystore> all = repository.findAll() as ArrayList<Keystore>
         ArrayList<KeystoreForm> all_form = toForm(all)
@@ -70,6 +77,7 @@ class KeystoreService {
     }
 
     //For GUI use only
+    //Refactored
     ArrayList<KeystoreFormGUI> getAllGUI(){
         ArrayList<KeystoreForm> keystoreForms = getAll()
         ArrayList<KeystoreFormGUI> keystoreFormGUIS = new ArrayList<>()
@@ -87,30 +95,30 @@ class KeystoreService {
         }
         return keystoreFormGUIS
     }
-
+    //Refactored
     KeystoreForm toForm(Keystore keystore){
         KeystoreForm keystoreForm = new KeystoreForm(
                 id: keystore.id,
                 agentId: keystore.agentId,
-                instanceId: keystore.instanceId,
+                instanceId: keystore.instance.id,
                 location: keystore.location,
                 description: keystore.description,
                 password: keystore.password,
         )
         return keystoreForm
     }
-
+    //Refactored
     ArrayList<KeystoreForm> toForm(ArrayList<Keystore> keystores){
         ArrayList<KeystoreForm> keystoreForms = new ArrayList<>()
         keystores.forEach(r -> keystoreForms.add(toForm(r)))
         return keystoreForms
     }
-
+    //Refactored
     Keystore toClass(KeystoreForm keystoreForm){
         Keystore keystore = new Keystore(
                 id: keystoreForm.id,
                 agentId: keystoreForm.agentId,
-                instanceId: keystoreForm.instanceId,
+                instance: instanceRepository.findById(keystoreForm.instanceId).get(),
                 location: keystoreForm.location,
                 description: keystoreForm.description,
                 password: keystoreForm.password
@@ -120,8 +128,11 @@ class KeystoreService {
 
     //USE ONLY IF PARSING RESPONSE FROM AGENT, MAPPING OF ID IS DIFFRENT
     //TODO
+    /*
+    OLD
     Keystore toClass(KeystoreDto keystoreDto, Long keystoreId){
         CertificateLoader certificateLoader = new CertificateLoader()
+        List<KeystoreCertificateDto> keystoreCertificateDtos
         List<Certificate> certificates = new ArrayList<>()
         keystoreDto.getCertificates().forEach(r->{
             Certificate certificate = new Certificate(
@@ -145,13 +156,49 @@ class KeystoreService {
         )
         return  keystore
     }
+    */
 
+    //Refactored
+    Keystore toClass(KeystoreDto keystoreDto, Long keystoreId){
+        CertificateLoader certificateLoader = new CertificateLoader()
+        List<KeystoreCertificate> keystoreCertificates = new ArrayList<>()
+        List<Certificate> certificates = new ArrayList<>()
+
+        keystoreDto.getKeystoreCertificateDtos().forEach(r->{
+            Certificate certificate = new Certificate(
+                    x509Certificate: certificateLoader.decodeX509(r.certificateDto.encodedX509Certificate),
+                    privateKey: certificateLoader.decodeKey(r.certificateDto.encodedPrivateKey),
+
+            )
+
+            KeystoreCertificate keystoreCertificate = new KeystoreCertificate(
+                    agentId: r.id,
+                    alias: r.alias,
+                    certificate: certificate,
+                    keystoreId: keystoreId
+            )
+            keystoreCertificates.add(keystoreCertificate)
+        })
+        Keystore keystore = new Keystore(
+                id: keystoreId,
+                agentId: keystoreDto.id,
+                instance: repository.findById(keystoreId).get().getInstance(),
+                location: keystoreDto.location,
+                description: keystoreDto.description,
+                password: keystoreDto.password,
+                keystoreCertificates: keystoreCertificates
+        )
+        return  keystore
+    }
+
+    //Refactored
     ArrayList<Keystore> toClass(ArrayList<KeystoreForm> keystoreForms){
         ArrayList<Keystore> keystores = new ArrayList<>()
         keystoreForms.forEach(r ->keystores.add(toClass(r)))
         return keystores
     }
 
+    //Refactored
     void add(ArrayList<KeystoreForm> keystoreForms){
         keystoreForms.forEach(r ->{
             Keystore keystore = toClass(r)
@@ -169,6 +216,7 @@ class KeystoreService {
         })
     }
 
+    //Refactored
     private KeystoreDto addToInstance(KeystoreForm keystoreForm){
         Instance instance = instanceRepository.findById(keystoreForm.getInstanceId()).get()
         PreparedRequest preparedRequest = new PreparedRequest()
@@ -200,25 +248,25 @@ class KeystoreService {
         Keystore targetKeystore = repository.findByInstanceIdAndAgentId(instance.getId(), keystoreDto.getId())
         Keystore keystore = toClass(keystoreDto, targetKeystore.getId())
         //TODO diffrence comparrison
-        List<Certificate> certificates = new ArrayList<>()
-        List<Certificate> currentcertificates = targetKeystore.getCertificates()
-        List<Certificate> unchangedCertificates = new ArrayList<>()
-        List<Certificate> modifiedCertificates = new ArrayList<>()
-        List<Certificate> addedCertificates = new ArrayList<>()
-        List<Certificate> removedCertificates = new ArrayList<>()
+        List<KeystoreCertificate> certificates = new ArrayList<>()
+        List<KeystoreCertificate> currentcertificates = targetKeystore.getKeystoreCertificates()
+        List<KeystoreCertificate> unchangedCertificates = new ArrayList<>()
+        List<KeystoreCertificate> modifiedCertificates = new ArrayList<>()
+        List<KeystoreCertificate> addedCertificates = new ArrayList<>()
+        List<KeystoreCertificate> removedCertificates = new ArrayList<>()
 
-        keystore.getCertificates().forEach(r->{
-            Certificate certificate = r
+        keystore.getKeystoreCertificates().forEach(r->{
+            KeystoreCertificate certificate = r
             if(currentcertificates != null){
-                Certificate tmpCertificate = currentcertificates.stream()
-                        .filter(tmp -> certificate.getAgent_id().equals(tmp.getAgent_id()))
+                KeystoreCertificate tmpCertificate = currentcertificates.stream()
+                        .filter(tmp -> certificate.getAgentId().equals(tmp.getAgentId()))
                         .findAny()
                         .orElse(null);
                 if(tmpCertificate == null){
                     LOG.info("Found new certificate with alias {}", certificate.alias)
                     addedCertificates.add(certificate)
                 }else {
-                    if (tmpCertificate.x509Certificate == certificate.x509Certificate && tmpCertificate.privateKey == certificate.privateKey) {
+                    if (tmpCertificate.certificate.x509Certificate == certificate.certificate.x509Certificate && tmpCertificate.certificate.privateKey == certificate.certificate.privateKey) {
                         LOG.info("Found unmodified certificate")
                         unchangedCertificates.add(tmpCertificate)
                         currentcertificates.remove(tmpCertificate)
@@ -233,10 +281,10 @@ class KeystoreService {
         })
         if(currentcertificates != null) removedCertificates.addAll(currentcertificates)
         LOG.info("Found {} deleted certificates",removedCertificates.size())
-        targetKeystore.getCertificates().clear()
-        targetKeystore.getCertificates().addAll(unchangedCertificates)
-        targetKeystore.getCertificates().addAll(modifiedCertificates)
-        targetKeystore.getCertificates().addAll(addedCertificates)
+        targetKeystore.getKeystoreCertificates().clear()
+        targetKeystore.getKeystoreCertificates().addAll(unchangedCertificates)
+        targetKeystore.getKeystoreCertificates().addAll(modifiedCertificates)
+        targetKeystore.getKeystoreCertificates().addAll(addedCertificates)
 
         /*
         certificates.addAll(unchangedCertificates)
@@ -257,7 +305,7 @@ class KeystoreService {
             //certificateRepository.deleteById(z.getId())
         })
     }
-
+    //Refactored
     void delete(List<KeystoreFormGUI> keystoreFormGUIS){
         List<Keystore> keystores = new ArrayList<>()
         keystoreFormGUIS.forEach(r->{
@@ -269,17 +317,17 @@ class KeystoreService {
             try{
                 LOG.info("Deleting keystore from agent")
                 deleteFromAgent(r)
-                LOG.info("Deleting keystore from database on instance {}, under the path {}", instanceRepository.findById(r.instanceId).get().name, r.location)
+                LOG.info("Deleting keystore from database on instance {}, under the path {}", instanceRepository.findById(r.instance.id).get().name, r.location)
                 repository.deleteById(r.id)
             }catch(Exception exception){
                 LOG.error("Error while trying to delete keystore with ID {}: {}",r.id, exception)
             }
         })
     }
-
+    //Refactored
     private void deleteFromAgent(Keystore keystore){
 
-        Instance instance = instanceRepository.findById(keystore.getInstanceId()).get()
+        Instance instance = instanceRepository.findById(keystore.instance.id).get()
         PreparedRequest preparedRequest = new PreparedRequest()
         RestTemplate restTemplate = new RestTemplate();
         HttpEntity request = new HttpEntity<>(preparedRequest.getHeader(instance))
@@ -316,6 +364,7 @@ class KeystoreService {
 
     }
 
+    //Refactored
     @Transactional
     void scheduledCheck(){
         if(environment.getProperty("controller.expiration.check").toBoolean()){
@@ -327,20 +376,20 @@ class KeystoreService {
 
             List<Instance> instances = instanceRepository.findAll()
             for(int i=0;i<instances.size();i++){
-                List<Certificate> expiredCertificates = new ArrayList<>()
-                List<Certificate> soonToExpireCertificates = new ArrayList<>()
+                List<KeystoreCertificate> expiredCertificates = new ArrayList<>()
+                List<KeystoreCertificate> soonToExpireCertificates = new ArrayList<>()
                 List<Keystore> keystores = repository.findByInstanceId(instances.get(i).getId())
                 keystores.forEach(k ->{
-                    List<Certificate> keystoreCertificates = certificateRepository.findByKeystoreId(k.getId())
+                    List<KeystoreCertificate> keystoreCertificates = keystoreCertificateRepository.findByKeystoreId(k.getId())
                     for(int c=0;c<keystoreCertificates.size();c++){
                         boolean alreadyExpired=false
                         boolean renewed = false;
                         try{
-                            keystoreCertificates.get(c).getX509Certificate().checkValidity(date)
+                            keystoreCertificates.get(c).getCertificate().getX509Certificate().checkValidity(date)
                         }catch(CertificateExpiredException exception){
 
-                            if(keystoreCertificates.get(c).managed){
-                                caVaultService.renew(keystoreCertificates.get(c).getX509Certificate(),false,keystoreCertificates.get(c).getSignerCertificateId(),keystoreCertificates.get(c).getId())
+                            if(keystoreCertificates.get(c).certificate.managed){
+                                caVaultService.renew(keystoreCertificates.get(c).getCertificate())
                                 renewed=true
                             }else if(!renewed){
                                 expiredCertificates.add(keystoreCertificates.get(c))
@@ -353,7 +402,7 @@ class KeystoreService {
                         }
                         if(!alreadyExpired && !renewed){
                             try{
-                                keystoreCertificates.get(c).getX509Certificate().checkValidity(currentDatePlus)
+                                keystoreCertificates.get(c).getCertificate().getX509Certificate().checkValidity(currentDatePlus)
                             }catch(CertificateExpiredException exception){
                                 soonToExpireCertificates.add(keystoreCertificates.get(c))
                                 LOG.warn("Certificate with alias {} is within expiration warning period!", keystoreCertificates.get(c).getAlias())

@@ -1,6 +1,7 @@
 package eu.outerheaven.certmanager.controller.repository
 
 import eu.outerheaven.certmanager.controller.entity.Certificate
+import eu.outerheaven.certmanager.controller.entity.Instance
 import eu.outerheaven.certmanager.controller.entity.KeystoreCertificate
 import org.springframework.data.repository.CrudRepository
 

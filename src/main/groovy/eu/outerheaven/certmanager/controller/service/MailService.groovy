@@ -4,6 +4,7 @@ import eu.outerheaven.certmanager.controller.entity.CaCertificate
 import eu.outerheaven.certmanager.controller.entity.Certificate
 import eu.outerheaven.certmanager.controller.entity.Instance
 import eu.outerheaven.certmanager.controller.entity.Keystore
+import eu.outerheaven.certmanager.controller.entity.KeystoreCertificate
 import eu.outerheaven.certmanager.controller.entity.User
 import eu.outerheaven.certmanager.controller.entity.UserRole
 import eu.outerheaven.certmanager.controller.repository.KeystoreRepository
@@ -68,7 +69,7 @@ class MailService {
         return mailSender;
     }
     */
-    void sendKeystoreAlert(List<Certificate> modifiedCertificates, List<Certificate> addedCertificates, List<Certificate> removedCertificates, Instance instance, Keystore keystore) throws MessagingException, IOException {
+    void sendKeystoreAlert(List<KeystoreCertificate> modifiedCertificates, List<KeystoreCertificate> addedCertificates, List<KeystoreCertificate> removedCertificates, Instance instance, Keystore keystore) throws MessagingException, IOException {
 
         MimeMessage msg = javaMailSender.createMimeMessage();
 
@@ -100,21 +101,21 @@ class MailService {
         if(addedCertificates.size()>0){
             text = text + "<h2 style=\"color:green;\">Added certificates: </h2>"
             addedCertificates.forEach(r->{
-                text = text + "<p>Certificate with ID ${r.getId()} alias ${r.getAlias()}, subject ${r.getX509Certificate().getSubjectDN()} has been added</p>"
+                text = text + "<p>Certificate with ID ${r.getId()} alias ${r.getAlias()}, subject ${r.getCertificate().getX509Certificate().getSubjectDN()} has been added</p>"
             })
         }
 
         if(modifiedCertificates.size()>0){
             text = text + "<h2 style=\"color:blue;\">Modified certificates: </h2>"
             modifiedCertificates.forEach(r->{
-                text = text + "<p>Certificate with ID ${r.getId()} alias ${r.getAlias()}, subject ${r.getX509Certificate().getSubjectDN()} has been modified</p>"
+                text = text + "<p>Certificate with ID ${r.getId()} alias ${r.getAlias()}, subject ${r.getCertificate().getX509Certificate().getSubjectDN()} has been modified</p>"
             })
         }
 
         if(removedCertificates.size()>0){
             text = text + "<h2 style=\"color:red;\">Removed certificates: </h2>"
             removedCertificates.forEach(r->{
-                text = text + "<p>Certificate with ID ${r.getId()} alias ${r.getAlias()}, subject ${r.getX509Certificate().getSubjectDN()} has been removed</p>"
+                text = text + "<p>Certificate with ID ${r.getId()} alias ${r.getAlias()}, subject ${r.getCertificate().getX509Certificate().getSubjectDN()} has been removed</p>"
             })
         }
         // hard coded a file path
@@ -125,7 +126,7 @@ class MailService {
         LOG.info("Modification alert email has been sent")
     }
 
-    void sendKeystoreCertificateExpirationAlert(List<Certificate> expiredCertificates, List<Certificate> soonToExpireCertificates, Instance instance) throws MessagingException, IOException{
+    void sendKeystoreCertificateExpirationAlert(List<KeystoreCertificate> expiredCertificates, List<KeystoreCertificate> soonToExpireCertificates, Instance instance) throws MessagingException, IOException{
 
 
         MimeMessage msg = javaMailSender.createMimeMessage();
@@ -153,14 +154,14 @@ class MailService {
             text = text + "<h2 style=\"color:red;\">Already expired certificates: </h2>"
             expiredCertificates.forEach(r->{
                 Keystore keystore = keystoreRepository.findById(r.getKeystoreId()).get()
-                text = text + "<p>Certificate with ID ${r.getId()} alias ${r.getAlias()}, subject ${r.getX509Certificate().getSubjectDN()} has already expired on ${r.getX509Certificate().getNotAfter()}, located under keystore ID ${keystore.getId()} and path ${keystore.getLocation()} </p>"
+                text = text + "<p>Certificate with ID ${r.getId()} alias ${r.getAlias()}, subject ${r.getCertificate().getX509Certificate().getSubjectDN()} has already expired on ${r.getCertificate().getX509Certificate().getNotAfter()}, located under keystore ID ${keystore.getId()} and path ${keystore.getLocation()} </p>"
             })
         }
         if(soonToExpireCertificates.size()>0){
             text = text + "<h2 style=\"color:red;\">Certificates within expiration warning period: </h2>"
             soonToExpireCertificates.forEach(r->{
                 Keystore keystore = keystoreRepository.findById(r.getKeystoreId()).get()
-                text = text + "<p>Certificate with ID ${r.getId()} alias ${r.getAlias()}, subject ${r.getX509Certificate().getSubjectDN()} will expire on ${r.getX509Certificate().getNotAfter()}, located under keystore ID ${keystore.getId()} and path ${keystore.getLocation()} </p>"
+                text = text + "<p>Certificate with ID ${r.getId()} alias ${r.getAlias()}, subject ${r.getCertificate().getX509Certificate().getSubjectDN()} will expire on ${r.getCertificate().getX509Certificate().getNotAfter()}, located under keystore ID ${keystore.getId()} and path ${keystore.getLocation()} </p>"
             })
         }
 
@@ -198,13 +199,13 @@ class MailService {
         if(expiredCertificates.size()>0){
             text = text + "<h2 style=\"color:red;\">Already expired certificates: </h2>"
             expiredCertificates.forEach(r->{
-                text = text + "<p>Certificate with ID ${r.getId()} alias ${r.getAlias()}, subject ${r.getX509Certificate().getSubjectDN()} has already expired on ${r.getX509Certificate().getNotAfter()}</p>"
+                text = text + "<p>Certificate with ID ${r.getId()} alias ${r.getAlias()}, subject ${r.getCertificate().getX509Certificate().getSubjectDN()} has already expired on ${r.getCertificate().getX509Certificate().getNotAfter()}</p>"
             })
         }
         if(soonToExpireCertificates.size()>0){
             text = text + "<h2 style=\"color:red;\">Certificates within expiration warning period: </h2>"
             soonToExpireCertificates.forEach(r->{
-                text = text + "<p>Certificate with ID ${r.getId()} alias ${r.getAlias()}, subject ${r.getX509Certificate().getSubjectDN()} will expire on ${r.getX509Certificate().getNotAfter()}</p>"
+                text = text + "<p>Certificate with ID ${r.getId()} alias ${r.getAlias()}, subject ${r.getCertificate().getX509Certificate().getSubjectDN()} will expire on ${r.getCertificate().getX509Certificate().getNotAfter()}</p>"
             })
         }
 
