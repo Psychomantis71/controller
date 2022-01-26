@@ -13,4 +13,6 @@ class KeystoreCertificateDto {
 
     Long keystoreId
 
+    Boolean keypair
+
 }

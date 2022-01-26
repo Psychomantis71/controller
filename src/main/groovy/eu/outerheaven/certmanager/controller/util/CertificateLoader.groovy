@@ -464,6 +464,7 @@ class CertificateLoader {
                     String alias = aliases.nextElement()
                     if(keystore.getKey(alias,password.toCharArray()) != null){
                         certificate.setPrivateKey(keystore.getKey(alias,password.toCharArray()) as PrivateKey)
+                        keystoreCertificate.setKeypair(true)
                         LOG.info("Certificate with alias {} has a private key attached to it!",alias)
                     }
                     keystoreCertificate.setAlias(alias)

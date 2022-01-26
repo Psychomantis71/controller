@@ -23,6 +23,8 @@ class KeystoreCertificate {
 
     private Long keystoreId
 
+    private Boolean keypair
+
     Long getId() {
         return id
     }
@@ -61,5 +63,13 @@ class KeystoreCertificate {
 
     void setKeystoreId(Long keystoreId) {
         this.keystoreId = keystoreId
+    }
+
+    Boolean getKeypair() {
+        return keypair
+    }
+
+    void setKeypair(Boolean keypair) {
+        this.keypair = keypair
     }
 }

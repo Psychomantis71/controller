@@ -141,7 +141,7 @@ class KeystoreCertificateService {
 
         return status
     }
-    //Refactored
+
     String getCleanCertName(Long certificateId){
         KeystoreCertificate certificate = repository.findById(certificateId).get()
         String filename =""
@@ -154,7 +154,7 @@ class KeystoreCertificateService {
 
         return filename
     }
-    //Refactored
+
     Resource exportAsPem(Long certificateId, String filename){
         CertificateLoader certificateLoader = new CertificateLoader()
         String folderName = certificateLoader.generateRandomName()
@@ -184,36 +184,38 @@ class KeystoreCertificateService {
             LOG.error("Failed exporting certificate:" + exception)
         }
     }
-    //Refactored
+
     void importCertificate(CertificateImportDto certificateImportDto){
         List<KeystoreCertificate> keystoreCertificates = new ArrayList<>()
         CertificateLoader certificateLoader = new CertificateLoader()
         if(certificateImportDto.getImportFormat() == "PEM"){
             List<Certificate> certificates
             certificates = certificateLoader.decodeImportPem(certificateImportDto.getBase64File(), certificateImportDto.getFilename())
-            certificates.forEach(r->{
+
+            for(int i=0;i<certificates.size();i++){
                 KeystoreCertificate keystoreCertificate = new KeystoreCertificate(
-                        alias: "IMPORTED_CHANGE_ME",
-                        certificate: r,
+                        alias: "IMPORTED_CHANGE_ME" + i,
+                        certificate: certificates.get(i),
                 )
+                if(certificates.get(i).privateKey != null) keystoreCertificate.setKeypair(true)
                 keystoreCertificates.add(keystoreCertificate)
-            })
+            }
         }else {
             keystoreCertificates = certificateLoader.decodeImportPCKS12(certificateImportDto.getBase64File(), certificateImportDto.getPassword())
             //LOG.info("Well fuck seems like the developer hasnt implemented this yet")
         }
-        propCertToAgents(keystoreCertificates,certificateImportDto.getSelectedKeystores())
 
-    }
-
-    //TODO CertificateDto has been replaced by KeystoreCertificateDto, this needs to be changed on the agent side too
-    //Refactored
-    void propCertToAgents(List<KeystoreCertificate> certificates, List<KeystoreFormGUI> keystoreFormGUIS){
         List<Keystore> keystores = new ArrayList<>()
-        keystoreFormGUIS.forEach(r->{
+        certificateImportDto.getSelectedKeystores().forEach(r->{
             Keystore keystore = keystoreRepository.findById(r.getId()).get()
             keystores.add(keystore)
         })
+
+        propCertToAgents(keystoreCertificates,keystores)
+
+    }
+
+    void propCertToAgents(List<KeystoreCertificate> certificates, List<Keystore> keystores){
 
         List<KeystoreCertificateDto> keystoreCertificateDtos = toDto(certificates)
 
@@ -225,9 +227,9 @@ class KeystoreCertificateService {
             ResponseEntity<String> response
             try{
                 response = restTemplate.postForEntity(instance.getAccessUrl() + api_url + "/addToKeystore/" + keystores.get(i).getAgentId(), request, String.class)
-                LOG.info("Propagated imported certificates to keystore {} on instance {}",keystores.get(i).getLocation(),instance.getName())
+                LOG.info("Propagated keystore certificates to keystore {} on instance {}",keystores.get(i).getLocation(),instance.getName())
             } catch(Exception e){
-                LOG.error("Propagation of imported certificates failed with error: " + e )
+                LOG.error("Propagation of keystore certificates failed with error: " + e )
             }
 
 
@@ -275,7 +277,8 @@ class KeystoreCertificateService {
                 agentId: keystoreCertificate.agentId,
                 alias: keystoreCertificate.alias,
                 certificateDto: certificateToCertificateDto(keystoreCertificate.certificate),
-                keystoreId: keystoreCertificate.keystoreId
+                keystoreId: keystoreCertificate.keystoreId,
+                keypair: keystoreCertificate.keypair
         )
         return keystoreCertificateDto
     }
@@ -288,12 +291,13 @@ class KeystoreCertificateService {
         return keystoreCertificateDtos
     }
 
+    //Manual method
     void assignSignerCert(Long signerCertificateId, List<CertificateFormGUI>  certificateFormGUIS){
         certificateFormGUIS.forEach(r->{
-            Certificate certificate = repository.findById(r.getId()).get()
+            Certificate certificate = certificateRepository.findById(r.getId()).get()
             certificate.setSignerCertificateId(signerCertificateId)
             certificate.setManaged(true)
-            repository.save(certificate)
+            certificateRepository.save(certificate)
         })
     }
 
@@ -303,7 +307,13 @@ class KeystoreCertificateService {
             if(environment.getProperty("controller.auto.assign.ca").toBoolean()){
                 keystoreCertificate = findAndAssignCa(keystoreCertificate)
             }
+            Long savedId = certificateRepository.save(keystoreCertificate.certificate).getId()
+            keystoreCertificate.setCertificate(certificateRepository.findById(savedId).get())
         }else{
+            if(keystoreCertificate.certificate.privateKey != null && certificate.privateKey == null){
+                certificate.setPrivateKey(keystoreCertificate.certificate.privateKey)
+                certificateRepository.save(certificate)
+            }
             keystoreCertificate.setCertificate(certificate)
         }
         return keystoreCertificate
@@ -312,7 +322,7 @@ class KeystoreCertificateService {
     List<KeystoreCertificate> purgeCertDuplicates(List<KeystoreCertificate> keystoreCertificates){
         List<KeystoreCertificate> keystoreCertificatesPurged = new ArrayList<>()
         for(int i=0;i<keystoreCertificates.size();i++){
-            keystoreCertificates.add(keystoreCertificates.get(i))
+            keystoreCertificates.add(purgeCertDuplicates(keystoreCertificates.get(i)))
         }
         return keystoreCertificatesPurged
     }

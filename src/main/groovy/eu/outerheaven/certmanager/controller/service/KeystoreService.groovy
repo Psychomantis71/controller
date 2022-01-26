@@ -69,6 +69,9 @@ class KeystoreService {
     @Autowired
     private Environment environment
 
+    @Autowired
+    private final KeystoreCertificateService keystoreCertificateService
+
     //Refactored
     ArrayList<KeystoreForm> getAll(){
         ArrayList<Keystore> all = repository.findAll() as ArrayList<Keystore>
@@ -124,7 +127,6 @@ class KeystoreService {
                 password: keystoreForm.password
         )
     }
-
 
     //USE ONLY IF PARSING RESPONSE FROM AGENT, MAPPING OF ID IS DIFFRENT
     //TODO
@@ -283,7 +285,9 @@ class KeystoreService {
         LOG.info("Found {} deleted certificates",removedCertificates.size())
         targetKeystore.getKeystoreCertificates().clear()
         targetKeystore.getKeystoreCertificates().addAll(unchangedCertificates)
+        modifiedCertificates = keystoreCertificateService.purgeCertDuplicates(modifiedCertificates)
         targetKeystore.getKeystoreCertificates().addAll(modifiedCertificates)
+        addedCertificates = keystoreCertificateService.purgeCertDuplicates(addedCertificates)
         targetKeystore.getKeystoreCertificates().addAll(addedCertificates)
 
         /*
@@ -419,9 +423,11 @@ class KeystoreService {
                     mailService.sendKeystoreCertificateExpirationAlert(expiredCertificates, soonToExpireCertificates, instances.get(i))
                 }
             }
-
+            LOG.info("Ended scheduled job: expiration check for certificates in keystores");
         }
-        LOG.info("Ended scheduled job: expiration check for certificates in keystores");
+
     }
+
+
 
 }

@@ -2,6 +2,7 @@ package eu.outerheaven.certmanager.controller.service
 
 import eu.outerheaven.certmanager.controller.dto.CertificateImportDto
 import eu.outerheaven.certmanager.controller.entity.CaCertificate
+import eu.outerheaven.certmanager.controller.entity.Keystore
 import eu.outerheaven.certmanager.controller.entity.KeystoreCertificate
 import eu.outerheaven.certmanager.controller.entity.StandaloneCertificate
 import eu.outerheaven.certmanager.controller.form.CaCertificateForm
@@ -78,7 +79,13 @@ class CaVaultService {
     private final KeystoreCertificateRepository keystoreCertificateRepository
 
     @Autowired
+    private final KeystoreCertificateService keystoreCertificateService
+
+    @Autowired
     private final MailService mailService
+
+    @Autowired
+    private final KeystoreRepository keystoreRepository
 
     @Autowired
     private Environment environment
@@ -362,7 +369,7 @@ class CaVaultService {
     }
 
     //Refactored
-    void renew(eu.outerheaven.certmanager.controller.entity.Certificate certificateToRenew){
+    eu.outerheaven.certmanager.controller.entity.Certificate renew(eu.outerheaven.certmanager.controller.entity.Certificate certificateToRenew){
         LOG.info("Starting renewal process for certificate with ID ", certificateToRenew.getId())
         CaCertificate parentCert = repository.findById(certificateToRenew.getSignerCertificateId()).get()
         X509Certificate certificate = certificateToRenew.getX509Certificate()
@@ -382,7 +389,7 @@ class CaVaultService {
         try{
             parentCert.getCertificate().getX509Certificate().checkValidity(endDate)
         }catch(CertificateExpiredException ignored){
-            LOG.error("Unable to renew managed certificate with ID {}, the new notAfter date would be after the expiration date of the signer certificate assigned to it! ",certificateId)
+            LOG.error("Unable to renew managed certificate with ID {}, the new notAfter date would be after the expiration date of the signer certificate assigned to it! ",certificateToRenew.signerCertificateId)
             throw new Exception("ASSIGN A SIGNER CERTIFICATE THAT WILL BE VALID AT THE NEW NOTAFTER DATE FOR THE ISSUED CERTIFICATE")
         }catch(CertificateNotYetValidException exception){
             LOG.debug("Exception: ", exception)
@@ -457,14 +464,15 @@ class CaVaultService {
         //writeCertToFileBase64Encoded(issuedCert, "re-issued-cert.cer")
         //exportKeyPairToKeystoreFile(issuedCertKeyPair, issuedCert, "re-issued-cert", "issued-cert.pfx", "PKCS12", "password")
 
-        List<CaCertificate> caCertificates = repository.findByCertificate(certificateToRenew)
-        List<StandaloneCertificate> standaloneCertificates = standaloneCertificateRepository.findByCertificate(certificateToRenew)
-        List<KeystoreCertificate> keystoreCertificates = keystoreCertificateRepository.findByCertificate(certificateToRenew)
-        //TODO IMPLEMENT STANDALONE AND KEYSTORE REPLACEMENT PROPAGATION
-        certificateToRenew.setX509Certificate(issuedCert)
-        certificateToRenew.setPrivateKey(issuedCertKeyPair.getPrivate())
-        certificateRepository.save(certificateToRenew)
+        eu.outerheaven.certmanager.controller.entity.Certificate issuedCertificate = new eu.outerheaven.certmanager.controller.entity.Certificate(
+                x509Certificate: issuedCert,
+                privateKey: issuedCertKeyPair.private,
+                signerCertificateId: certificateToRenew.signerCertificateId,
+                managed: certificateToRenew.managed
+        )
+        certificateRepository.save(issuedCertificate)
         LOG.info("Finished renewal process!")
+        return issuedCertificate
     }
     //Refactored?
     void assignSignerCaCert(Long signerCertificateId, List<CaCertificateFormGUI>  caCertificateFormGUI){
@@ -718,10 +726,10 @@ class CaVaultService {
     }
     //TODO this shit, first fix cert loader
     void replaceCertificate(CertificateImportDto certificateImportDto, Long certId){
-        List<CaCertificate> caCertificates = new ArrayList<>()
+        List<eu.outerheaven.certmanager.controller.entity.Certificate> certificates = new ArrayList<>()
         CertificateLoader certificateLoader = new CertificateLoader()
-        caCertificates = certToCaCert(certificateLoader.decodeImportPem(certificateImportDto.getBase64File(), certificateImportDto.getFilename()))
-        if(caCertificates.size()>1) throw new Exception("Cannot replace one certificate with multiple ones!")
+        certificates = certificateLoader.decodeImportPem(certificateImportDto.getBase64File(), certificateImportDto.getFilename())
+        if(certificates.size()>1) throw new Exception("Cannot replace one certificate with multiple ones!")
         CaCertificate caCertificate = repository.findById(certId).get()
         eu.outerheaven.certmanager.controller.entity.Certificate certificate = caCertificate.getCertificate()
         certificate.setX509Certificate(caCertificates.get(0).x509Certificate)
@@ -730,7 +738,7 @@ class CaVaultService {
         repository.save(caCertificate)
     }
 
-    //Goes over
+    //TODO give this another look
     List<CaCertificate> purgeCertDuplicates(List<CaCertificate> certificates){
         List<CaCertificate> purgedList = new ArrayList<>()
         certificates.forEach(r-> {
@@ -752,30 +760,30 @@ class CaVaultService {
     @Transactional
     void scheduledCheck(){
         if(environment.getProperty("controller.expiration.check").toBoolean()){
-            LOG.info("Starting scheduled job: expiration check for certificates in CA Vault");
+            LOG.info("Starting scheduled job: expiration check and automatic renewal of certificates");
             Date date = new Date()
             Calendar calendar = Calendar.getInstance();
             calendar.add(Calendar.DATE, environment.getProperty("controller.expiration.check.warn.period").toInteger());
             Date currentDatePlus= calendar.getTime();
-            List<CaCertificate> caCertificates = repository.findAll() as List<CaCertificate>
-            List<CaCertificate> expiredCertificates = new ArrayList<>()
-            List<CaCertificate> soonToExpireCertificates = new ArrayList<>()
+            List<eu.outerheaven.certmanager.controller.entity.Certificate> certificates = certificateRepository.findAll() as List<eu.outerheaven.certmanager.controller.entity.Certificate>
+            List<eu.outerheaven.certmanager.controller.entity.Certificate> expiredCertificates = new ArrayList<>()
+            List<eu.outerheaven.certmanager.controller.entity.Certificate> soonToExpireCertificates = new ArrayList<>()
 
-            caCertificates.forEach(r->{
+            certificates.forEach(r->{
 
                 boolean alreadyExpired=false
                 boolean renewed = false
                 try{
-                    r.getCertificate().getX509Certificate().checkValidity(date)
+                    r.getX509Certificate().checkValidity(date)
                 }catch(CertificateExpiredException exception){
-                    if(r.getCertificate().managed){
-                        LOG.info("Renewing certificate in CA vault with alias {} and ID {}", r.alias,r.id)
-                        renew(r.getCertificate())
+                    if(r.managed){
+                        LOG.info("Certificate with ID {} is due for automatic renewal",r.id)
+                        renewAndPropagate(r)
                         renewed = true
                     }else if(!renewed){
                         expiredCertificates.add(r)
                         alreadyExpired=true
-                        LOG.warn("Certificate with alias {} has already expired!", r.getAlias())
+                        LOG.warn("Certificate with ID {} has already expired!", r.getId())
                         LOG.debug("Exception: ", exception)
                     }
                 }catch(CertificateNotYetValidException exception){
@@ -783,24 +791,35 @@ class CaVaultService {
                 }
                 if(!alreadyExpired || !renewed){
                     try{
-                        r.getCertificate().getX509Certificate().checkValidity(currentDatePlus)
+                        r.getX509Certificate().checkValidity(currentDatePlus)
                     }catch(CertificateExpiredException exception){
                         soonToExpireCertificates.add(r)
-                        LOG.warn("Certificate with alias {} is within expiration warning period!", r.getAlias())
+                        LOG.warn("Certificate with ID {} is within expiration warning period!", r.getId())
                         LOG.debug("Exception: ", exception)
                     }catch(CertificateNotYetValidException exception){
-                        LOG.info("Certificate with alias {} is not yet valid!", r.getAlias())
+                        LOG.info("Certificate with ID {} is not yet valid!", r.getId())
                         LOG.debug("Exception: ", exception)
                     }
                 }
 
             })
-            if(soonToExpireCertificates.size()>0 || expiredCertificates.size()>0 && environment.getProperty("controller.mail.expiration.alert").toBoolean()){
-                mailService.sendKeystoreCaCertificateExpirationAlert(expiredCertificates,soonToExpireCertificates)
-            }
-
-            LOG.info("Ended scheduled job: expiration check for certificates in CA Vault");
+            //TODO MAIL
+            LOG.info("Ended scheduled job: expiration check and automatic renewal of certificates");
         }
+    }
+
+    void renewAndPropagate(eu.outerheaven.certmanager.controller.entity.Certificate certificate){
+        eu.outerheaven.certmanager.controller.entity.Certificate renewedCertificate = renew(certificate)
+        List<KeystoreCertificate> keystoreCertificates = keystoreCertificateRepository.findByCertificate(certificate)
+        keystoreCertificates.forEach(r->{
+            List<KeystoreCertificate> tmpcerts = new ArrayList<>()
+            r.setCertificate(renewedCertificate)
+            tmpcerts.add(r)
+            Keystore keystore = keystoreRepository.findById(r.keystoreId).get()
+            List<Keystore> keystores = new ArrayList<>()
+            keystores.add(keystore)
+            keystoreCertificateService.propCertToAgents(tmpcerts,keystores)
+        })
     }
 
     protected String getAlternateNames(final X509Certificate cert, Integer targetType) {
