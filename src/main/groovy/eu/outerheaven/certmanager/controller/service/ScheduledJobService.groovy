@@ -29,7 +29,6 @@ class ScheduledJobService {
     @Scheduled(cron = "\${controller.expiration.check.period}")
     public void run() {
         caVaultService.scheduledCheck()
-        keystoreService.scheduledCheck()
     }
 
 }

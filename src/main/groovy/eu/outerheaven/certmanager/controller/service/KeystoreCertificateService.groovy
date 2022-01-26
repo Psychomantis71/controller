@@ -322,7 +322,7 @@ class KeystoreCertificateService {
     List<KeystoreCertificate> purgeCertDuplicates(List<KeystoreCertificate> keystoreCertificates){
         List<KeystoreCertificate> keystoreCertificatesPurged = new ArrayList<>()
         for(int i=0;i<keystoreCertificates.size();i++){
-            keystoreCertificates.add(purgeCertDuplicates(keystoreCertificates.get(i)))
+            keystoreCertificatesPurged.add(purgeCertDuplicates(keystoreCertificates.get(i)))
         }
         return keystoreCertificatesPurged
     }

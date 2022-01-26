@@ -745,6 +745,7 @@ class CaVaultService {
             eu.outerheaven.certmanager.controller.entity.Certificate cert = certificateRepository.findByX509Certificate(r.getCertificate().x509Certificate)
             if(cert == null){
                 purgedList.add(r)
+                repository.save(r)
             }else{
                 CaCertificate newcert = new CaCertificate(
                         alias: r.alias,
@@ -813,7 +814,15 @@ class CaVaultService {
         List<KeystoreCertificate> keystoreCertificates = keystoreCertificateRepository.findByCertificate(certificate)
         keystoreCertificates.forEach(r->{
             List<KeystoreCertificate> tmpcerts = new ArrayList<>()
-            r.setCertificate(renewedCertificate)
+            eu.outerheaven.certmanager.controller.entity.Certificate tmpcert
+            if(r.keypair){
+                tmpcert = renewedCertificate
+            }else{
+                tmpcert = new eu.outerheaven.certmanager.controller.entity.Certificate(
+                        x509Certificate: renewedCertificate.x509Certificate,
+                )
+            }
+            r.setCertificate(tmpcert)
             tmpcerts.add(r)
             Keystore keystore = keystoreRepository.findById(r.keystoreId).get()
             List<Keystore> keystores = new ArrayList<>()
