@@ -1,6 +1,5 @@
 package eu.outerheaven.certmanager.controller.service
 
-import com.sun.corba.se.impl.oa.poa.ActiveObjectMap
 import eu.outerheaven.certmanager.controller.dto.CertificateDto
 import eu.outerheaven.certmanager.controller.dto.CertificateImportDto
 import eu.outerheaven.certmanager.controller.dto.KeystoreCertificateDto
@@ -10,7 +9,6 @@ import eu.outerheaven.certmanager.controller.entity.Instance
 import eu.outerheaven.certmanager.controller.entity.Keystore
 import eu.outerheaven.certmanager.controller.entity.KeystoreCertificate
 import eu.outerheaven.certmanager.controller.form.CertificateFormGUI
-import eu.outerheaven.certmanager.controller.form.KeystoreFormGUI
 import eu.outerheaven.certmanager.controller.repository.CaCertificateRepository
 import eu.outerheaven.certmanager.controller.repository.CertificateRepository
 import eu.outerheaven.certmanager.controller.repository.InstanceRepository
@@ -332,8 +330,10 @@ class KeystoreCertificateService {
         caCertificates.forEach(r->{
             if(r.getCertificate().getX509Certificate().getSubjectDN() == keystoreCertificate.getCertificate().getX509Certificate().getIssuerDN()){
                 try{
-                    keystoreCertificate.getCertificate().getX509Certificate().verify(r.getCertificate().getX509Certificate().getPublicKey(), "BC")
-                    keystoreCertificate.getCertificate().setSignerCertificateId(r.getId())
+                    keystoreCertificate.certificate.x509Certificate.verify(r.getCertificate().getX509Certificate().getPublicKey(), "BC")
+                    keystoreCertificate.certificate.setSignerCertificateId(r.getId())
+                    if(environment.getProperty("controller.auto.assign.managed").toBoolean()) keystoreCertificate.certificate.setManaged(true)
+
                     return keystoreCertificate
                 }catch(Exception ignored){
                 }

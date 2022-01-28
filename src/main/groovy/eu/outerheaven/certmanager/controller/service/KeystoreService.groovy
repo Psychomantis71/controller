@@ -177,7 +177,8 @@ class KeystoreService {
                     agentId: r.id,
                     alias: r.alias,
                     certificate: certificate,
-                    keystoreId: keystoreId
+                    keystoreId: keystoreId,
+                    keypair: r.keypair
             )
             keystoreCertificates.add(keystoreCertificate)
         })

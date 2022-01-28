@@ -239,11 +239,12 @@ class CaVaultService {
         issuedCert.verify(parentCert.getCertificate().getX509Certificate().getPublicKey(), BC_PROVIDER)
 
         eu.outerheaven.certmanager.controller.entity.Certificate certificate = new eu.outerheaven.certmanager.controller.entity.Certificate(
-                privateKey: issuedCertKeyPair.getPrivate(),
+                privateKey: issuedCertKeyPair.private,
                 x509Certificate: issuedCert,
                 managed: false,
-                signerCertificateId: parentCert.getCertificate().getId()
+                signerCertificateId: parentCert.certificate.getId()
         )
+        if(environment.getProperty("controller.auto.assign.managed").toBoolean()) certificate.setManaged(true)
 
         if(newSignedCertificateForm.intermediate){
             CaCertificate caCertificate = new CaCertificate(
@@ -369,8 +370,8 @@ class CaVaultService {
     }
 
     //Refactored
-    eu.outerheaven.certmanager.controller.entity.Certificate renew(eu.outerheaven.certmanager.controller.entity.Certificate certificateToRenew){
-        LOG.info("Starting renewal process for certificate with ID ", certificateToRenew.getId())
+    void renew(eu.outerheaven.certmanager.controller.entity.Certificate certificateToRenew){
+        LOG.info("Starting renewal process for certificate with ID {}",certificateToRenew.id)
         CaCertificate parentCert = repository.findById(certificateToRenew.getSignerCertificateId()).get()
         X509Certificate certificate = certificateToRenew.getX509Certificate()
         Date firstDate = certificate.getNotBefore()
@@ -464,15 +465,10 @@ class CaVaultService {
         //writeCertToFileBase64Encoded(issuedCert, "re-issued-cert.cer")
         //exportKeyPairToKeystoreFile(issuedCertKeyPair, issuedCert, "re-issued-cert", "issued-cert.pfx", "PKCS12", "password")
 
-        eu.outerheaven.certmanager.controller.entity.Certificate issuedCertificate = new eu.outerheaven.certmanager.controller.entity.Certificate(
-                x509Certificate: issuedCert,
-                privateKey: issuedCertKeyPair.private,
-                signerCertificateId: certificateToRenew.signerCertificateId,
-                managed: certificateToRenew.managed
-        )
-        certificateRepository.save(issuedCertificate)
+        certificateToRenew.setX509Certificate(issuedCert)
+        certificateToRenew.setPrivateKey(issuedCertKeyPair.private)
+        certificateRepository.save(certificateToRenew)
         LOG.info("Finished renewal process!")
-        return issuedCertificate
     }
     //Refactored?
     void assignSignerCaCert(Long signerCertificateId, List<CaCertificateFormGUI>  caCertificateFormGUI){
@@ -724,6 +720,13 @@ class CaVaultService {
         certificates.forEach(r->{repository.save(r)})
 
     }
+
+    void remove(List<CaCertificateFormGUI> certificateFormGUIS){
+        certificateFormGUIS.forEach(r->{
+            repository.deleteById(r.id)
+        })
+    }
+
     //TODO this shit, first fix cert loader
     void replaceCertificate(CertificateImportDto certificateImportDto, Long certId){
         List<eu.outerheaven.certmanager.controller.entity.Certificate> certificates = new ArrayList<>()
@@ -740,23 +743,69 @@ class CaVaultService {
 
     //TODO give this another look
     List<CaCertificate> purgeCertDuplicates(List<CaCertificate> certificates){
+        LOG.debug("Purge duplicates for CaCerts started")
         List<CaCertificate> purgedList = new ArrayList<>()
         certificates.forEach(r-> {
             eu.outerheaven.certmanager.controller.entity.Certificate cert = certificateRepository.findByX509Certificate(r.getCertificate().x509Certificate)
             if(cert == null){
+                if(environment.getProperty("controller.auto.assign.ca").toBoolean()){
+                    r = findAndAssignCa(r)
+                }
                 purgedList.add(r)
                 repository.save(r)
             }else{
+                List<CaCertificate> dupetest = repository.findByCertificate(cert)
+                if(dupetest.size()>0) throw new Exception("DUPLICATE CA CERTIFICATES (with same x509Certificate entity) ARE NOT ALLOWED")
                 CaCertificate newcert = new CaCertificate(
                         alias: r.alias,
                         certificate: cert,
                 )
+                if(environment.getProperty("controller.auto.assign.ca").toBoolean()){
+                    newcert = findAndAssignCa(newcert)
+                }
                 purgedList.add(newcert)
             }
         })
-
+        LOG.debug("Purge duplicates for CaCerts finished")
         return purgedList
     }
+
+    CaCertificate findAndAssignCa(CaCertificate caCertificate){
+        LOG.debug("Assign CA for CaCert started")
+        List<CaCertificate> caCertificates = repository.findAll() as List<CaCertificate>
+        caCertificates.forEach(r->{
+            if(r.certificate.x509Certificate.getSubjectDN() == caCertificate.certificate.x509Certificate.getIssuerDN()){
+                try{
+                    caCertificate.certificate.x509Certificate.verify(r.getCertificate().getX509Certificate().getPublicKey(), "BC")
+                    caCertificate.certificate.setSignerCertificateId(r.getId())
+                    if(environment.getProperty("controller.auto.assign.managed").toBoolean()) caCertificate.certificate.setManaged(true)
+                    assignCaToCertificates(caCertificate)
+                    return caCertificate
+                }catch(Exception ignored){
+                }
+            }
+        })
+        LOG.debug("Assign CA for CaCert finished")
+        return caCertificate
+    }
+
+    void assignCaToCertificates(CaCertificate caCertificate){
+        LOG.info("Assign CA for certificates started")
+        List<eu.outerheaven.certmanager.controller.entity.Certificate> certificates = certificateRepository.findBySignerCertificateId(null)
+        certificates.forEach(c->{
+            try{
+                if(caCertificate.certificate.x509Certificate.getSubjectDN() == c.x509Certificate.getIssuerDN()){
+                    c.x509Certificate.verify(caCertificate.certificate.x509Certificate.getPublicKey(), "BC")
+                    c.setSignerCertificateId(caCertificate.id)
+                    if(environment.getProperty("controller.auto.assign.managed").toBoolean()) c.setManaged(true)
+                    LOG.info("CA matches and assigned as issuer to certificate with ID ",c.id)
+                    certificateRepository.save(c)
+                }
+            }catch(Exception ignored){}
+        })
+        LOG.info("Assign CA for certificates finished")
+    }
+
 
     @Transactional
     void scheduledCheck(){
@@ -810,14 +859,20 @@ class CaVaultService {
     }
 
     void renewAndPropagate(eu.outerheaven.certmanager.controller.entity.Certificate certificate){
-        eu.outerheaven.certmanager.controller.entity.Certificate renewedCertificate = renew(certificate)
+        LOG.info("Certificate arrived at renewal endpoint with ID",certificate.id)
         List<KeystoreCertificate> keystoreCertificates = keystoreCertificateRepository.findByCertificate(certificate)
+        renew(certificate)
+        eu.outerheaven.certmanager.controller.entity.Certificate renewedCertificate = certificateRepository.findById(certificate.id).get()
+        if(renewedCertificate.privateKey != null) LOG.info("Renewed certificate has a private key present")
         keystoreCertificates.forEach(r->{
+            LOG.info("Renewing keystore certificate with id {}, alias {}, keypair",r.id,r.alias,r.keypair)
             List<KeystoreCertificate> tmpcerts = new ArrayList<>()
             eu.outerheaven.certmanager.controller.entity.Certificate tmpcert
             if(r.keypair){
+                LOG.info("Keystore certificate to renew is keypair, sending both x509 and private key")
                 tmpcert = renewedCertificate
             }else{
+                LOG.info("Keystore certificate to renew is only public, sending only x509 certificate")
                 tmpcert = new eu.outerheaven.certmanager.controller.entity.Certificate(
                         x509Certificate: renewedCertificate.x509Certificate,
                 )

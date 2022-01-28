@@ -327,7 +327,7 @@ export default {
       return 'red';
     },
     getManagedColor(status) {
-      if (status === 'YES') return 'green';
+      if (status === true) return 'green';
       return 'red';
     },
     getKeystoreData() {
