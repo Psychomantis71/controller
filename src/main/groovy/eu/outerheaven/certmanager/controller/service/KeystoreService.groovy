@@ -259,6 +259,7 @@ class KeystoreService {
         List<KeystoreCertificate> removedCertificates = new ArrayList<>()
 
         keystore.getKeystoreCertificates().forEach(r->{
+            LOG.info("Handling now agent kc with data: alias {}, agent ID {}, and certificate DN {}",r.alias,r.agentId,r.certificate.x509Certificate.subjectDN)
             KeystoreCertificate certificate = r
             if(currentcertificates != null){
                 KeystoreCertificate tmpCertificate = currentcertificates.stream()
@@ -270,13 +271,19 @@ class KeystoreService {
                     addedCertificates.add(certificate)
                 }else {
                     if (tmpCertificate.certificate.x509Certificate == certificate.certificate.x509Certificate && tmpCertificate.certificate.privateKey == certificate.certificate.privateKey) {
-                        LOG.info("Found unmodified certificate")
+                        LOG.info("Found unmodified certificate, agent ID {}, local ID {}",tmpCertificate.agentId,tmpCertificate.id)
                         unchangedCertificates.add(tmpCertificate)
                         currentcertificates.remove(tmpCertificate)
                     }else{
-                        LOG.info("Found modified certificate")
-                        certificate.setId(tmpCertificate.getId())
-                        modifiedCertificates.add(certificate)
+                        LOG.info("Found modified certificate, agent ID {}, local ID {}",tmpCertificate.agentId,tmpCertificate.id)
+                        LOG.info("Existing entry is as follows: ID {}, agent ID {}, alias {}, certificate DN {}, certificate not before {}, certificate not after {}",tmpCertificate.id, tmpCertificate.agentId,tmpCertificate.alias,tmpCertificate.certificate.x509Certificate.subjectDN,tmpCertificate.certificate.x509Certificate.notBefore,tmpCertificate.certificate.x509Certificate.notAfter)
+                        LOG.info("New entry is as follows:, agent ID {}, alias {}, certificate DN {}, certificate not before {}, certificate not after {}",certificate.agentId,certificate.alias,certificate.certificate.x509Certificate.subjectDN,certificate.certificate.x509Certificate.notBefore,certificate.certificate.x509Certificate.notAfter)
+                        //certificate.setId(tmpCertificate.id)
+                        tmpCertificate.setCertificate(certificate.certificate)
+                        tmpCertificate.setAlias(certificate.alias)
+                        tmpCertificate.setKeypair(certificate.keypair)
+                        LOG.info("Adjusted modified certificate data is now, agent ID {}, local ID {}",tmpCertificate.agentId,tmpCertificate.id)
+                        modifiedCertificates.add(tmpCertificate)
                         currentcertificates.remove(tmpCertificate)
                     }
                 }
@@ -287,6 +294,10 @@ class KeystoreService {
         targetKeystore.getKeystoreCertificates().clear()
         targetKeystore.getKeystoreCertificates().addAll(unchangedCertificates)
         modifiedCertificates = keystoreCertificateService.purgeCertDuplicates(modifiedCertificates)
+        LOG.info("Modified contents after purging duplicates: ")
+        modifiedCertificates.forEach(r->{
+            LOG.info("Keystore certificate ID {}, keystore certificate agent ID {}, Certificate ID {}, Certificate DN {}",r.id,r.agentId,r.certificate.id,r.certificate.x509Certificate.subjectDN)
+        })
         targetKeystore.getKeystoreCertificates().addAll(modifiedCertificates)
         addedCertificates = keystoreCertificateService.purgeCertDuplicates(addedCertificates)
         targetKeystore.getKeystoreCertificates().addAll(addedCertificates)
@@ -298,6 +309,14 @@ class KeystoreService {
         targetKeystore.setCertificates(certificates)
         */
         repository.save(targetKeystore)
+
+        Keystore check = repository.findById(targetKeystore.id).get()
+
+        LOG.info("Keystore contents after saving: ")
+        check.keystoreCertificates.forEach(r->{
+            LOG.info("Keystore certificate ID {}, keystore certificate agent ID {}, Certificate ID {}, Certificate DN {}",r.id,r.agentId,r.certificate.id,r.certificate.x509Certificate.subjectDN)
+        })
+
         boolean mailAlert = false
         if (environment.getProperty("controller.mail.alert").toBoolean() && environment.getProperty("controller.mail.modification.alert").toBoolean()){
             mailAlert= true

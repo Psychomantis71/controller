@@ -6,7 +6,7 @@
         class="text-center"
         mt-5
       >
-        <h1>Certificates</h1>
+        <h1>Keystore entries</h1>
         <v-btn
           dark
           color="teal lighten-1"

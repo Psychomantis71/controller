@@ -717,7 +717,10 @@ class CaVaultService {
             })
         }
         certificates = purgeCertDuplicates(certificates)
-        certificates.forEach(r->{repository.save(r)})
+        certificates.forEach(r->{
+            LOG.info("Imported Ca certificates after duplicate purge are: ID {}, alias {}, certificate ID {}, certificate DN {}",r.id,r.alias,r.certificate.id,r.certificate.x509Certificate.subjectDN)
+            repository.save(r)
+        })
 
     }
 
@@ -806,8 +809,6 @@ class CaVaultService {
         LOG.info("Assign CA for certificates finished")
     }
 
-
-    @Transactional
     void scheduledCheck(){
         if(environment.getProperty("controller.expiration.check").toBoolean()){
             LOG.info("Starting scheduled job: expiration check and automatic renewal of certificates");
@@ -844,7 +845,7 @@ class CaVaultService {
                         r.getX509Certificate().checkValidity(currentDatePlus)
                     }catch(CertificateExpiredException exception){
                         soonToExpireCertificates.add(r)
-                        LOG.warn("Certificate with ID {} is within expiration warning period!", r.getId())
+                        LOG.warn("Certificate with ID {} is within expiration warning period, subject DN {}", r.getId(),r.x509Certificate.getSubjectDN())
                         LOG.debug("Exception: ", exception)
                     }catch(CertificateNotYetValidException exception){
                         LOG.info("Certificate with ID {} is not yet valid!", r.getId())
@@ -859,13 +860,12 @@ class CaVaultService {
     }
 
     void renewAndPropagate(eu.outerheaven.certmanager.controller.entity.Certificate certificate){
-        LOG.info("Certificate arrived at renewal endpoint with ID",certificate.id)
-        List<KeystoreCertificate> keystoreCertificates = keystoreCertificateRepository.findByCertificate(certificate)
+        LOG.info("Certificate arrived at renewal endpoint with ID {}",certificate.id)
         renew(certificate)
         eu.outerheaven.certmanager.controller.entity.Certificate renewedCertificate = certificateRepository.findById(certificate.id).get()
-        if(renewedCertificate.privateKey != null) LOG.info("Renewed certificate has a private key present")
+        List<KeystoreCertificate> keystoreCertificates = keystoreCertificateRepository.findByCertificate(renewedCertificate)
         keystoreCertificates.forEach(r->{
-            LOG.info("Renewing keystore certificate with id {}, alias {}, keypair",r.id,r.alias,r.keypair)
+            LOG.info("Renewing keystore certificate with id {}, alias {}, keypair {}",r.id,r.alias,r.keypair)
             List<KeystoreCertificate> tmpcerts = new ArrayList<>()
             eu.outerheaven.certmanager.controller.entity.Certificate tmpcert
             if(r.keypair){

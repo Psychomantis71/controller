@@ -82,6 +82,39 @@
             {{ item.title }}
           </v-list-item-title>
         </v-list-item>
+
+        <v-list-group
+          v-for="item in sideMenuItemsGroup"
+          :key="item.title"
+          v-model="item.active"
+          :prepend-icon="item.icon"
+          no-action
+        >
+          <template v-slot:activator>
+            <v-list-item-content>
+              <v-list-item-title v-text="item.title"></v-list-item-title>
+            </v-list-item-content>
+          </template>
+
+          <v-list-item
+            link
+            v-for="child in item.items"
+            :key="child.title"
+            text
+            :to="child.path"
+            class="pl-5"
+          >
+            <v-list-item-icon>
+              <v-icon>
+                {{ child.icon }}
+              </v-icon>
+            </v-list-item-icon>
+            <v-list-item-content>
+              <v-list-item-title v-text="child.title"></v-list-item-title>
+            </v-list-item-content>
+          </v-list-item>
+        </v-list-group>
+
       </v-list>
     </v-navigation-drawer>
 
@@ -125,13 +158,26 @@ export default {
         return [
           { title: 'Instances', path: '/instances', icon: 'desktop_windows' },
           { title: 'Keystores', path: '/keystores', icon: 'vpn_key' },
-          { title: 'Certificates', path: '/certificates', icon: 'badge' },
-          { title: 'Admin settings', path: '/home', icon: 'admin_panel_settings' },
-          { title: 'Ca vault', path: '/CaVault', icon: 'assured_workload' },
-          { title: 'Test', path: '/Test', icon: 'admin_panel_settings' },
           { title: 'Upload to agent', path: '/uploadtoagent', icon: 'upload' },
           { title: 'Users', path: '/users', icon: 'supervisor_account' },
         ];
+      }
+      return [];
+    },
+    sideMenuItemsGroup() {
+      if (this.isAuthenticated) {
+        return [
+          {
+            icon:'badge',
+          active: true,
+          items: [
+              { title: 'Keystore entires', path: '/certificates', icon: 'list_alt'},
+              { title: 'Standalone entires', path: '/certificates', icon: 'snippet_folder'},
+              { title: 'CA entires', path: '/CaVault', icon: 'assured_workload' },
+              { title: 'X509 and Private keys', path: '/certificates', icon: 'https' },
+        ],
+          title: 'Certificates',
+      }];
       }
       return [];
     },

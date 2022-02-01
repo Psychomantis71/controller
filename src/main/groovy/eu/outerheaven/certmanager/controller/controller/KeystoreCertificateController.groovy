@@ -25,9 +25,9 @@ import javax.servlet.http.HttpServletRequest
 
 @RestController
 @RequestMapping("/api/certificate")
-class CertificateController {
+class KeystoreCertificateController {
 
-    private final Logger LOG = LoggerFactory.getLogger(CertificateController)
+    private final Logger LOG = LoggerFactory.getLogger(KeystoreCertificateController)
 
     @Autowired
     private final KeystoreCertificateService service

@@ -300,7 +300,7 @@ class KeystoreCertificateService {
     }
 
     KeystoreCertificate purgeCertDuplicates(KeystoreCertificate keystoreCertificate){
-        Certificate certificate = certificateRepository.findByX509Certificate(keystoreCertificate.getCertificate().getX509Certificate())
+        Certificate certificate = certificateRepository.findByX509Certificate(keystoreCertificate.certificate.x509Certificate)
         if(certificate == null){
             if(environment.getProperty("controller.auto.assign.ca").toBoolean()){
                 keystoreCertificate = findAndAssignCa(keystoreCertificate)
