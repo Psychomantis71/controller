@@ -4,10 +4,8 @@ import eu.outerheaven.certmanager.controller.dto.CertificateImportDto
 import eu.outerheaven.certmanager.controller.entity.CaCertificate
 import eu.outerheaven.certmanager.controller.entity.Keystore
 import eu.outerheaven.certmanager.controller.entity.KeystoreCertificate
-import eu.outerheaven.certmanager.controller.entity.StandaloneCertificate
 import eu.outerheaven.certmanager.controller.form.CaCertificateForm
 import eu.outerheaven.certmanager.controller.form.CaCertificateFormGUI
-import eu.outerheaven.certmanager.controller.form.CertificateFormGUI
 import eu.outerheaven.certmanager.controller.form.NewSignedCertificateForm
 import eu.outerheaven.certmanager.controller.repository.CaCertificateRepository
 import eu.outerheaven.certmanager.controller.repository.CertificateRepository
@@ -42,7 +40,6 @@ import org.springframework.core.env.Environment
 import org.springframework.core.io.ByteArrayResource
 import org.springframework.core.io.Resource
 import org.springframework.stereotype.Service
-import org.springframework.transaction.annotation.Transactional
 
 import java.nio.file.Files
 import java.nio.file.Path
@@ -54,7 +51,6 @@ import java.security.cert.CertificateNotYetValidException
 import java.security.cert.CertificateParsingException
 import java.security.cert.X509Certificate
 import java.security.interfaces.RSAPublicKey
-import java.text.DateFormat
 import java.text.SimpleDateFormat
 import java.time.Instant
 import java.time.LocalDateTime

@@ -4,18 +4,6 @@ class CertificateFormGUI {
 
     Long id
 
-    String alias
-
-    String keystorePath
-
-    String instanceName
-
-    String hostname
-
-    Boolean managed
-
-    //Cert data
-
     String status
 
     String subject
@@ -27,6 +15,20 @@ class CertificateFormGUI {
     Date validTo
 
     String serial
+
+    String signature
+
+    String signatureHashAlgorithm
+
+    Long keysize
+
+    String[] keyUsage
+
+    String[] enhancedKeyUsage
+
+    String[] alternativeName
+
+    String[] basicConstraints
 
     Boolean privateKey
 }

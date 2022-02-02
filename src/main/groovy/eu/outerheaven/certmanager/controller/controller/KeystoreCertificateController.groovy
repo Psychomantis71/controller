@@ -2,7 +2,7 @@ package eu.outerheaven.certmanager.controller.controller
 
 import eu.outerheaven.certmanager.controller.dto.CertificateDto
 import eu.outerheaven.certmanager.controller.dto.CertificateImportDto
-import eu.outerheaven.certmanager.controller.form.CertificateFormGUI
+import eu.outerheaven.certmanager.controller.form.KeystoreCertificateFormGUI
 import eu.outerheaven.certmanager.controller.form.KeystoreForm
 import eu.outerheaven.certmanager.controller.service.CaVaultService
 import eu.outerheaven.certmanager.controller.service.KeystoreCertificateService
@@ -54,7 +54,7 @@ class KeystoreCertificateController {
     }
 
     @PostMapping("/remove")
-    ResponseEntity delete(@RequestBody List<CertificateFormGUI> certificateFormGUIS){
+    ResponseEntity delete(@RequestBody List<KeystoreCertificateFormGUI> certificateFormGUIS){
         ResponseEntity.ok(service.delete(certificateFormGUIS))
     }
 
@@ -86,7 +86,7 @@ class KeystoreCertificateController {
     }
 
     @PostMapping("/{signerCertificateId}/assign-signer")
-    ResponseEntity assignSigner(@PathVariable Long signerCertificateId, @RequestBody List<CertificateFormGUI> certificateFormGUIS){
+    ResponseEntity assignSigner(@PathVariable Long signerCertificateId, @RequestBody List<KeystoreCertificateFormGUI> certificateFormGUIS){
         service.assignSignerCert(signerCertificateId, certificateFormGUIS)
         ResponseEntity.ok().body("")
     }

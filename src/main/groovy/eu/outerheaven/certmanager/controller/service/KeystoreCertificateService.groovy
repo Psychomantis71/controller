@@ -8,7 +8,7 @@ import eu.outerheaven.certmanager.controller.entity.Certificate
 import eu.outerheaven.certmanager.controller.entity.Instance
 import eu.outerheaven.certmanager.controller.entity.Keystore
 import eu.outerheaven.certmanager.controller.entity.KeystoreCertificate
-import eu.outerheaven.certmanager.controller.form.CertificateFormGUI
+import eu.outerheaven.certmanager.controller.form.KeystoreCertificateFormGUI
 import eu.outerheaven.certmanager.controller.repository.CaCertificateRepository
 import eu.outerheaven.certmanager.controller.repository.CertificateRepository
 import eu.outerheaven.certmanager.controller.repository.InstanceRepository
@@ -62,7 +62,7 @@ class KeystoreCertificateService {
     String api_url="/api/certificate"
 
     //Refactored
-    CertificateFormGUI toFormGUI(KeystoreCertificate certificate){
+    KeystoreCertificateFormGUI toFormGUI(KeystoreCertificate certificate){
         Keystore keystore = keystoreRepository.findById(certificate.getKeystoreId()).get()
         Instance instance = instanceRepository.findById(keystore.getInstance().getId()).get()
         String status = certStatus(certificate.getCertificate().getX509Certificate().getNotBefore(), certificate.getCertificate().getX509Certificate().getNotAfter())
@@ -70,7 +70,7 @@ class KeystoreCertificateService {
         if(certificate.getCertificate().getPrivateKey() != null){
             pk=true
         }
-        CertificateFormGUI certificateFormGUI = new CertificateFormGUI(
+        KeystoreCertificateFormGUI certificateFormGUI = new KeystoreCertificateFormGUI(
                 id: certificate.id,
                 alias: certificate.alias,
                 keystorePath: keystore.location,
@@ -88,15 +88,15 @@ class KeystoreCertificateService {
         return certificateFormGUI
     }
     //Refactored
-    ArrayList<CertificateFormGUI> toFormGUI(ArrayList<KeystoreCertificate> certificates){
-        ArrayList<CertificateFormGUI> certificateFormGUIS = new ArrayList<>()
+    ArrayList<KeystoreCertificateFormGUI> toFormGUI(ArrayList<KeystoreCertificate> certificates){
+        ArrayList<KeystoreCertificateFormGUI> certificateFormGUIS = new ArrayList<>()
         certificates.forEach(r ->certificateFormGUIS.add(toFormGUI(r)))
         return certificateFormGUIS
     }
     //Refactored
-    ArrayList<CertificateFormGUI> getAllGUI(){
+    ArrayList<KeystoreCertificateFormGUI> getAllGUI(){
         ArrayList<KeystoreCertificate> certificates = repository.findAll() as ArrayList<KeystoreCertificate>
-        ArrayList<CertificateFormGUI> certificateFormGUIS = toFormGUI(certificates)
+        ArrayList<KeystoreCertificateFormGUI> certificateFormGUIS = toFormGUI(certificates)
         return certificateFormGUIS
     }
     //TODO this needs to fetch parameter from config file
@@ -234,7 +234,7 @@ class KeystoreCertificateService {
         }
     }
     //Refactored
-    void delete(List<CertificateFormGUI> certificateFormGUIS){
+    void delete(List<KeystoreCertificateFormGUI> certificateFormGUIS){
         List <KeystoreCertificate> certificates = new ArrayList<>()
         certificateFormGUIS.forEach(r->{
             KeystoreCertificate certificate = repository.findById(r.id).get()
@@ -290,7 +290,7 @@ class KeystoreCertificateService {
     }
 
     //Manual method
-    void assignSignerCert(Long signerCertificateId, List<CertificateFormGUI>  certificateFormGUIS){
+    void assignSignerCert(Long signerCertificateId, List<KeystoreCertificateFormGUI>  certificateFormGUIS){
         certificateFormGUIS.forEach(r->{
             Certificate certificate = certificateRepository.findById(r.getId()).get()
             certificate.setSignerCertificateId(signerCertificateId)
