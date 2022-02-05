@@ -24,7 +24,7 @@ import org.springframework.web.bind.annotation.RestController
 import javax.servlet.http.HttpServletRequest
 
 @RestController
-@RequestMapping("/api/certificate")
+@RequestMapping("/api/keystore-certificate")
 class KeystoreCertificateController {
 
     private final Logger LOG = LoggerFactory.getLogger(KeystoreCertificateController)

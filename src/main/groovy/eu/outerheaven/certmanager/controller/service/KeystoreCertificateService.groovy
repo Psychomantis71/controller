@@ -59,7 +59,7 @@ class KeystoreCertificateService {
     @Autowired
     private Environment environment
 
-    String api_url="/api/certificate"
+    String api_url="/api/keystore-certificate"
 
     //Refactored
     KeystoreCertificateFormGUI toFormGUI(KeystoreCertificate certificate){

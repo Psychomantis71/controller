@@ -9,6 +9,8 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.core.env.Environment
 import org.springframework.stereotype.Service
 
+import java.security.cert.CertificateParsingException
+import java.security.cert.X509Certificate
 import java.security.interfaces.RSAPublicKey
 import java.time.Instant
 import java.time.LocalDateTime
@@ -41,9 +43,28 @@ class CertificateService {
                 signature: certificate.x509Certificate.publicKey.getAlgorithm(),
                 signatureHashAlgorithm: certificate.x509Certificate.getSigAlgName().toString(),
                 keysize: pub.getModulus().bitLength(),
+                keyUsage: getKeyUsageList(certificate.x509Certificate),
+                enhancedKeyUsage: certificate.x509Certificate.getExtendedKeyUsage(),
+                alternativeNameDNS: getAlternateNames(certificate.x509Certificate,2),
+                alternativeNameIP: getAlternateNames(certificate.x509Certificate,7),
+                basicConstraints: certificate.x509Certificate.basicConstraints,
                 privateKey: pk
         )
         return certificateFormGUI
+    }
+
+    List<CertificateFormGUI> toFormGUI(List<Certificate> certificates){
+        List<CertificateFormGUI> certificateFormGUIS = new ArrayList<>()
+        certificates.forEach(r->{
+            certificateFormGUIS.add(toFormGUI(r))
+        })
+        return certificateFormGUIS
+    }
+
+    List<CertificateFormGUI> getAllGUI(){
+        List<Certificate> certificates = repository.findAll() as ArrayList<Certificate>
+        List<CertificateFormGUI> certificateFormGUIS = toFormGUI(certificates)
+        return certificateFormGUIS
     }
 
     String certStatus(Date notBefore, Date notAfter){
@@ -63,4 +84,50 @@ class CertificateService {
 
         return status
     }
+
+    protected String getAlternateNames(final X509Certificate cert, Integer targetType) {
+        final StringBuilder res = new StringBuilder();
+
+        try {
+            if (cert.getSubjectAlternativeNames() == null) {
+                return null;
+            }
+
+            for (List<?> entry : cert.getSubjectAlternativeNames()) {
+                final int type = ((Integer) entry.get(0)).intValue();
+
+                // DNS or IP
+                if (type == targetType) {
+                    if (res.length() > 0) {
+                        res.append(", ");
+                    }
+
+                    res.append(entry.get(1));
+                }
+            }
+        } catch (CertificateParsingException ex) {
+            // Do nothing
+        }
+
+        return res.toString();
+    }
+
+    //TODO ask someone for a more efficient way to do this, this is stupid
+    List<String> getKeyUsageList(X509Certificate certificate){
+        List<String> keyUsageList = new ArrayList<>()
+        boolean[] keyUsage = certificate.getKeyUsage()
+        if(keyUsage[0]) keyUsageList.add(new String("digitalSignature"))
+        if(keyUsage[1]) keyUsageList.add(new String("nonRepudiation"))
+        if(keyUsage[2]) keyUsageList.add(new String("keyEncipherment"))
+        if(keyUsage[3]) keyUsageList.add(new String("dataEncipherment"))
+        if(keyUsage[4]) keyUsageList.add(new String("keyAgreement"))
+        if(keyUsage[5]) keyUsageList.add(new String("keyCertSign"))
+        if(keyUsage[6]) keyUsageList.add(new String("cRLSign"))
+        if(keyUsage[7]) keyUsageList.add(new String("encipherOnly"))
+        if(keyUsage[8]) keyUsageList.add(new String("decipherOnly"))
+
+        return keyUsageList
+    }
+
+
 }

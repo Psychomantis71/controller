@@ -18,6 +18,7 @@ import org.bouncycastle.asn1.ASN1Encodable
 import org.bouncycastle.asn1.DERSequence
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.asn1.x509.BasicConstraints
+import org.bouncycastle.asn1.x509.ExtendedKeyUsage
 import org.bouncycastle.asn1.x509.Extension
 import org.bouncycastle.asn1.x509.GeneralName
 import org.bouncycastle.asn1.x509.KeyUsage
@@ -40,6 +41,7 @@ import org.springframework.core.env.Environment
 import org.springframework.core.io.ByteArrayResource
 import org.springframework.core.io.Resource
 import org.springframework.stereotype.Service
+import sun.awt.ExtendedKeyCodes
 
 import java.nio.file.Files
 import java.nio.file.Path
@@ -436,7 +438,6 @@ class CaVaultService {
 
         // Add intended key usage extension if needed
         issuedCertBuilder.addExtension(Extension.keyUsage, false, new KeyUsage(KeyUsage.keyEncipherment))
-
         // Add DNS name is cert is to used for SSL
         if(certificate.getSubjectAlternativeNames().getAt(2).toString() != null && certificate.getSubjectAlternativeNames().getAt(7).toString() != null ){
             issuedCertBuilder.addExtension(Extension.subjectAlternativeName, false, new DERSequence(new ASN1Encodable[] {

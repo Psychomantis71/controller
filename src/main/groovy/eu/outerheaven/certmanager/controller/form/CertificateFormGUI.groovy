@@ -22,13 +22,15 @@ class CertificateFormGUI {
 
     Long keysize
 
-    String[] keyUsage
+    List<String> keyUsage
 
-    String[] enhancedKeyUsage
+    List<String> enhancedKeyUsage
 
-    String[] alternativeName
+    String alternativeNameDNS
 
-    String[] basicConstraints
+    String alternativeNameIP
+
+    Integer basicConstraints
 
     Boolean privateKey
 }

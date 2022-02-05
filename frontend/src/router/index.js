@@ -6,7 +6,7 @@ import SignIn from '../components/SignIn.vue';
 import Secured from '../components/Secured.vue';
 import Instances from '../components/Instances';
 import Keystores from "@/components/Keystores";
-import Certificates from "@/components/Certificates";
+import Certificates from "@/components/KeystoreCertificates";
 import CaVault from "@/components/CaVault"
 import Test from "@/components/Test"
 import UploadToAgent from "@/components/UploadToAgent";
