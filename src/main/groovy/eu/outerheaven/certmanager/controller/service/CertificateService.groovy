@@ -3,14 +3,18 @@ package eu.outerheaven.certmanager.controller.service
 import eu.outerheaven.certmanager.controller.entity.Certificate
 import eu.outerheaven.certmanager.controller.form.CertificateFormGUI
 import eu.outerheaven.certmanager.controller.repository.CertificateRepository
+import org.bouncycastle.jce.interfaces.ECPublicKey
+import org.bouncycastle.jce.provider.JCEECPublicKey
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.core.env.Environment
 import org.springframework.stereotype.Service
 
+import java.security.PublicKey
 import java.security.cert.CertificateParsingException
 import java.security.cert.X509Certificate
+import java.security.interfaces.DSAPublicKey
 import java.security.interfaces.RSAPublicKey
 import java.time.Instant
 import java.time.LocalDateTime
@@ -29,7 +33,6 @@ class CertificateService {
 
     CertificateFormGUI toFormGUI(Certificate certificate){
         String certstat = certStatus(certificate.x509Certificate.notBefore,certificate.x509Certificate.notAfter)
-        RSAPublicKey pub = (RSAPublicKey) certificate.x509Certificate.getPublicKey()
         boolean pk = false
         if(certificate.privateKey != null) pk=true
         CertificateFormGUI certificateFormGUI = new CertificateFormGUI(
@@ -42,12 +45,14 @@ class CertificateService {
                 serial: certificate.x509Certificate.serialNumber,
                 signature: certificate.x509Certificate.publicKey.getAlgorithm(),
                 signatureHashAlgorithm: certificate.x509Certificate.getSigAlgName().toString(),
-                keysize: pub.getModulus().bitLength(),
+                keysize: getKeyLength(certificate.x509Certificate.publicKey),
                 keyUsage: getKeyUsageList(certificate.x509Certificate),
                 enhancedKeyUsage: certificate.x509Certificate.getExtendedKeyUsage(),
                 alternativeNameDNS: getAlternateNames(certificate.x509Certificate,2),
                 alternativeNameIP: getAlternateNames(certificate.x509Certificate,7),
                 basicConstraints: certificate.x509Certificate.basicConstraints,
+                managed: certificate.managed,
+                signerId: certificate.signerCertificateId,
                 privateKey: pk
         )
         return certificateFormGUI
@@ -116,6 +121,7 @@ class CertificateService {
     List<String> getKeyUsageList(X509Certificate certificate){
         List<String> keyUsageList = new ArrayList<>()
         boolean[] keyUsage = certificate.getKeyUsage()
+        if(keyUsage == null) return keyUsageList
         if(keyUsage[0]) keyUsageList.add(new String("digitalSignature"))
         if(keyUsage[1]) keyUsageList.add(new String("nonRepudiation"))
         if(keyUsage[2]) keyUsageList.add(new String("keyEncipherment"))
@@ -127,6 +133,50 @@ class CertificateService {
         if(keyUsage[8]) keyUsageList.add(new String("decipherOnly"))
 
         return keyUsageList
+    }
+
+    /**
+     * Gets the key length of supported keys
+     * @param pk PublicKey used to derive the keysize
+     * @return -1 if key is unsupported, otherwise a number >= 0. 0 usually means the length can not be calculated,
+     * for example if the key is an EC key and the "implicitlyCA" encoding is used.
+     */
+    static int getKeyLength(final PublicKey pk) {
+        int len = -1;
+        if (pk instanceof RSAPublicKey) {
+            final RSAPublicKey rsapub = (RSAPublicKey) pk;
+            len = rsapub.getModulus().bitLength();
+        } else if (pk instanceof JCEECPublicKey) {
+            final JCEECPublicKey ecpriv = (JCEECPublicKey) pk;
+            final org.bouncycastle.jce.spec.ECParameterSpec spec = ecpriv.getParameters();
+            if (spec != null) {
+                len = spec.getN().bitLength();
+            } else {
+                // We support the key, but we don't know the key length
+                len = 0;
+            }
+        } else if (pk instanceof ECPublicKey) {
+            final ECPublicKey ecpriv = (ECPublicKey) pk;
+            final java.security.spec.ECParameterSpec spec = ecpriv.getParameters();
+            if (spec != null) {
+                len = spec.getOrder().bitLength(); // does this really return something we expect?
+            } else {
+                // We support the key, but we don't know the key length
+                len = 0;
+            }
+        } else if (pk instanceof DSAPublicKey) {
+            final DSAPublicKey dsapub = (DSAPublicKey) pk;
+            if ( dsapub.getParams() != null ) {
+                len = dsapub.getParams().getP().bitLength();
+            } else {
+                len = dsapub.getY().bitLength();
+            }
+        }
+        return len;
+    }
+
+    void getExtendedKeyUsageList(X509Certificate certificate){
+
     }
 
 

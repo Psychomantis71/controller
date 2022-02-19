@@ -171,8 +171,8 @@ export default {
             icon:'badge',
           active: true,
           items: [
-              { title: 'Keystore entires', path: '/certificates', icon: 'list_alt'},
-              { title: 'Standalone entires', path: '/certificates', icon: 'snippet_folder'},
+              { title: 'Keystore entires', path: '/keystore-certificates', icon: 'list_alt'},
+              { title: 'Standalone entires', path: '/standalone-certificates', icon: 'snippet_folder'},
               { title: 'CA entires', path: '/CaVault', icon: 'assured_workload' },
               { title: 'X509 and Private keys', path: '/certificates', icon: 'https' },
         ],

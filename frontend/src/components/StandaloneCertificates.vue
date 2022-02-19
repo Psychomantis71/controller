@@ -6,7 +6,7 @@
         class="text-center"
         mt-5
       >
-        <h1>Certificates</h1>
+        <h1>Standalone entries</h1>
         <v-btn
           dark
           color="teal lighten-1"
@@ -193,6 +193,8 @@
             </template>
             <template v-slot:expanded-item="{ item }">
               <td :colspan="headers.length">
+                Details about {{ item.alias }}
+                <br>
                 Subject: {{ item.subject }}
                 <br>
                 Issuer: {{ item.issuer }}
@@ -202,18 +204,8 @@
                 Valid to: {{ item.validTo }}
                 <br>
                 Serial: {{ item.serial }}
-                <br v-if="item.alternativeNameDNS !== null">
-                <v-chip v-if="item.alternativeNameDNS !== null">Alternative DNS: {{ item.alternativeNameDNS }}</v-chip>
-                <br v-if="item.alternativeNameDNS !== null">
-                <v-chip v-if="item.alternativeNameIP !== null">Alternative IP: {{ item.alternativeNameIP }}</v-chip>
-                <br v-if="item.alternativeNameIP !== null">
-                Keysize: {{ item.keysize }}
                 <br>
-                Signature: {{ item.signature }}
-                <br>
-                Signature Hash Algorithm: {{ item.signatureHashAlgorithm }}
-                <br>
-                Private key present in databsae: {{ item.privateKey }}
+                Key: {{ item.privateKey }}
               </td>
             </template>
           </v-data-table>
@@ -243,7 +235,10 @@ export default {
           align: 'start',
           value: 'id',
         },
-        { text: 'Subject', value: 'subject' },
+        { text: 'Certificate alias', value: 'alias' },
+        { text: 'Keystore path', value: 'keystorePath' },
+        { text: 'Instance name', value: 'instanceName' },
+        { text: 'Hostname', value: 'hostname' },
         { text: 'Managed', value: 'managed' },
         { text: 'Status', value: 'status' },
         { text: '', value: 'data-table-expand' },
@@ -282,9 +277,8 @@ export default {
   methods: {
     getCertificateData() {
       this.$axios
-        .get('http://localhost:8091/api/certificate/all-gui')
+        .get('http://localhost:8091/api/keystore-certificate/all-gui')
         .then((response) => {
-          console.log(response.data)
           this.certificatelist = response.data;
         })
         .catch((error) => {

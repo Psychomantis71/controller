@@ -6,7 +6,9 @@ import SignIn from '../components/SignIn.vue';
 import Secured from '../components/Secured.vue';
 import Instances from '../components/Instances';
 import Keystores from "@/components/Keystores";
-import Certificates from "@/components/KeystoreCertificates";
+import Certificates from "@/components/Certificates";
+import KeystoreCertificates from "@/components/KeystoreCertificates";
+import StandaloneCertificates from "@/components/StandaloneCertificates";
 import CaVault from "@/components/CaVault"
 import Test from "@/components/Test"
 import UploadToAgent from "@/components/UploadToAgent";
@@ -50,6 +52,14 @@ const router = new Router({
       path: '/keystores',
       name: 'Keystores',
       component: Keystores,
+    },{
+      path: '/keystore-certificates',
+      name: 'Keystore Certificates',
+      component: KeystoreCertificates,
+    },{
+      path: '/standalone-certificates',
+      name: 'Standalone Certificates',
+      component: StandaloneCertificates,
     },{
       path: '/certificates',
       name: 'Certificates',

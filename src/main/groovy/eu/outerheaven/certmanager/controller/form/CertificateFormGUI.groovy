@@ -33,4 +33,8 @@ class CertificateFormGUI {
     Integer basicConstraints
 
     Boolean privateKey
+
+    Boolean managed
+
+    Long signerId
 }
