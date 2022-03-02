@@ -20,6 +20,10 @@ class User {
 
     private String email
 
+    private boolean mfa;
+
+    private String secret;
+
     User() {
 
     }

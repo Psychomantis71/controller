@@ -202,11 +202,15 @@
                 Valid to: {{ item.validTo }}
                 <br>
                 Serial: {{ item.serial }}
-                <br v-if="item.alternativeNameDNS !== null">
-                <v-chip v-if="item.alternativeNameDNS !== null">Alternative DNS: {{ item.alternativeNameDNS }}</v-chip>
-                <br v-if="item.alternativeNameDNS !== null">
-                <v-chip v-if="item.alternativeNameIP !== null">Alternative IP: {{ item.alternativeNameIP }}</v-chip>
-                <br v-if="item.alternativeNameIP !== null">
+                <br>
+                <div v-if="item.alternativeNameDNS !== null && item.alternativeNameDNS !=='' ">
+                  <v-chip>">Alternative DNS: {{ item.alternativeNameDNS }}</v-chip>
+                  <br>
+                </div>
+                <div v-if="item.alternativeNameIP !== null && item.alternativeNameIP !=='' ">
+                  <v-chip>Alternative IP: {{ item.alternativeNameIP }}</v-chip>
+                  <br>
+                </div>
                 Keysize: {{ item.keysize }}
                 <br>
                 Signature: {{ item.signature }}

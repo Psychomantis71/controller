@@ -29,6 +29,7 @@ dependencies {
     implementation files('libs/ibmpkcs.jar')
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     runtimeOnly 'com.h2database:h2'
+    implementation 'dev.samstevens.totp:totp:1.7.1'
     providedRuntime 'org.springframework.boot:spring-boot-starter-tomcat'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.security:spring-security-test'

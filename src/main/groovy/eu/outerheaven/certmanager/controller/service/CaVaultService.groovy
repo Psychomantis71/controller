@@ -2,13 +2,18 @@ package eu.outerheaven.certmanager.controller.service
 
 import eu.outerheaven.certmanager.controller.dto.CertificateImportDto
 import eu.outerheaven.certmanager.controller.entity.CaCertificate
+import eu.outerheaven.certmanager.controller.entity.Instance
 import eu.outerheaven.certmanager.controller.entity.Keystore
 import eu.outerheaven.certmanager.controller.entity.KeystoreCertificate
+import eu.outerheaven.certmanager.controller.entity.StandaloneCertificate
+import eu.outerheaven.certmanager.controller.entity.User
+import eu.outerheaven.certmanager.controller.entity.UserRole
 import eu.outerheaven.certmanager.controller.form.CaCertificateForm
 import eu.outerheaven.certmanager.controller.form.CaCertificateFormGUI
 import eu.outerheaven.certmanager.controller.form.NewSignedCertificateForm
 import eu.outerheaven.certmanager.controller.repository.CaCertificateRepository
 import eu.outerheaven.certmanager.controller.repository.CertificateRepository
+import eu.outerheaven.certmanager.controller.repository.InstanceRepository
 import eu.outerheaven.certmanager.controller.repository.KeystoreCertificateRepository
 import eu.outerheaven.certmanager.controller.repository.KeystoreRepository
 import eu.outerheaven.certmanager.controller.repository.StandaloneCertificateRepository
@@ -41,6 +46,7 @@ import org.springframework.core.env.Environment
 import org.springframework.core.io.ByteArrayResource
 import org.springframework.core.io.Resource
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 import sun.awt.ExtendedKeyCodes
 
 import java.nio.file.Files
@@ -75,6 +81,9 @@ class CaVaultService {
 
     @Autowired
     private final KeystoreCertificateRepository keystoreCertificateRepository
+
+    @Autowired
+    private final InstanceRepository instanceRepository
 
     @Autowired
     private final KeystoreCertificateService keystoreCertificateService
@@ -806,6 +815,7 @@ class CaVaultService {
         LOG.info("Assign CA for certificates finished")
     }
 
+    @Transactional
     void scheduledCheck(){
         if(environment.getProperty("controller.expiration.check").toBoolean()){
             LOG.info("Starting scheduled job: expiration check and automatic renewal of certificates");
@@ -852,6 +862,9 @@ class CaVaultService {
 
             })
             //TODO MAIL
+            if(environment.getProperty("controller.mail.alert").toBoolean() && environment.getProperty("controller.mail.expiration.alert").toBoolean()){
+                prepareAndSendMail(expiredCertificates + soonToExpireCertificates)
+            }
             LOG.info("Ended scheduled job: expiration check and automatic renewal of certificates");
         }
     }
@@ -908,5 +921,58 @@ class CaVaultService {
         }
 
         return res.toString();
+    }
+
+    void prepareAndSendMail(List<eu.outerheaven.certmanager.controller.entity.Certificate> certificateList){
+        Set<Instance> affectedInstances =  new LinkedHashSet<Instance>()
+        Set<Keystore> affectedKeystores = new LinkedHashSet<Keystore>()
+        Set<KeystoreCertificate> affectedKeystoreCertificates = new LinkedHashSet<KeystoreCertificate>()
+        Set<StandaloneCertificate> affectedStandaloneCertificates = new LinkedHashSet<StandaloneCertificate>()
+        Set<CaCertificate> affectedCaCertificates = new LinkedHashSet<CaCertificate>()
+        certificateList.forEach(r->{
+            List<KeystoreCertificate> keystoreCertificates = keystoreCertificateRepository.findByCertificate(r)
+            affectedKeystoreCertificates.addAll(keystoreCertificates)
+            List<CaCertificate> caCertificates = repository.findByCertificate(r)
+            affectedCaCertificates.addAll(caCertificates)
+            List<StandaloneCertificate> standaloneCertificates = standaloneCertificateRepository.findByCertificate(r)
+            affectedStandaloneCertificates.addAll(standaloneCertificates)
+            keystoreCertificates.forEach(n->{
+                Keystore keystore = keystoreRepository.findById(n.keystoreId).get()
+                affectedKeystores.add(keystore)
+                affectedInstances.add(keystore.instance)
+            })
+            standaloneCertificates.forEach(n->{
+                affectedInstances.add(n.instance)
+            })
+
+        })
+        Set<User> affectedUsers = new LinkedHashSet<User>()
+        affectedInstances.forEach(r->{
+            affectedUsers.addAll(r.assignedUsers)
+        })
+        LOG.info("Affected instances: {}", affectedInstances.size())
+        LOG.info("Affected ks: {}", affectedKeystores.size())
+        LOG.info("Affected kc: {}", affectedKeystoreCertificates.size())
+        affectedUsers.forEach(r->{
+            List<Instance> userAffectedInstances = new ArrayList<>()
+            List<Keystore> userAffectedKeystores = new ArrayList<>()
+            List<KeystoreCertificate> userAffectedKeystoreCertificates = new ArrayList<>()
+            List<StandaloneCertificate> userAffectedStandaloneCertificates = new ArrayList<>()
+            affectedInstances.forEach(n->{
+                if(n.assignedUsers.contains(r)) userAffectedInstances.add(n)
+            })
+            affectedKeystores.forEach(n->{
+                if(userAffectedInstances.contains(n.instance)) userAffectedKeystores.add(n)
+            })
+            affectedKeystoreCertificates.forEach(n->{
+                Keystore keystore = keystoreRepository.findById(n.keystoreId).get()
+                if(userAffectedKeystores.contains(keystore)) userAffectedKeystoreCertificates.add(n)
+            })
+            affectedStandaloneCertificates.forEach(n->{
+                if(userAffectedInstances.contains(n.instance)) userAffectedStandaloneCertificates.add(n)
+            })
+            LOG.info("User affected ks size: {}", userAffectedKeystores.size())
+            mailService.sendCertificateExpirationAlert(r,userAffectedInstances,userAffectedKeystores,userAffectedKeystoreCertificates,userAffectedStandaloneCertificates, affectedCaCertificates as List<CaCertificate>)
+        })
     }
 }

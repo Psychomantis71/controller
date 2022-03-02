@@ -3,6 +3,7 @@ package eu.outerheaven.certmanager.controller.service
 import eu.outerheaven.certmanager.controller.dto.CertificateDto
 import eu.outerheaven.certmanager.controller.dto.KeystoreCertificateDto
 import eu.outerheaven.certmanager.controller.dto.KeystoreDto
+import eu.outerheaven.certmanager.controller.entity.CaCertificate
 import eu.outerheaven.certmanager.controller.entity.Certificate
 import eu.outerheaven.certmanager.controller.entity.Instance
 import eu.outerheaven.certmanager.controller.entity.Keystore
@@ -164,7 +165,6 @@ class KeystoreService {
     Keystore toClass(KeystoreDto keystoreDto, Long keystoreId){
         CertificateLoader certificateLoader = new CertificateLoader()
         List<KeystoreCertificate> keystoreCertificates = new ArrayList<>()
-        List<Certificate> certificates = new ArrayList<>()
 
         keystoreDto.getKeystoreCertificateDtos().forEach(r->{
             Certificate certificate = new Certificate(
@@ -172,7 +172,6 @@ class KeystoreService {
                     privateKey: certificateLoader.decodeKey(r.certificateDto.encodedPrivateKey),
 
             )
-
             KeystoreCertificate keystoreCertificate = new KeystoreCertificate(
                     agentId: r.id,
                     alias: r.alias,
@@ -210,6 +209,7 @@ class KeystoreService {
                 LOG.info("Keystore has been added to controller database, pushing now to agent")
                 KeystoreDto keystoreDto = addToInstance(r)
                 keystore = toClass(keystoreDto, keystoreId)
+                keystore.setKeystoreCertificates(keystoreCertificateService.purgeCertDuplicates(keystore.keystoreCertificates))
                 repository.save(keystore)
             }catch(Exception exception){
                 LOG.error("Failed to add new keystore with error: " + exception)
@@ -387,5 +387,8 @@ class KeystoreService {
         }
 
     }
+
+
+
 
 }

@@ -5,6 +5,7 @@ import eu.outerheaven.certmanager.controller.entity.Certificate
 import eu.outerheaven.certmanager.controller.entity.Instance
 import eu.outerheaven.certmanager.controller.entity.Keystore
 import eu.outerheaven.certmanager.controller.entity.KeystoreCertificate
+import eu.outerheaven.certmanager.controller.entity.StandaloneCertificate
 import eu.outerheaven.certmanager.controller.entity.User
 import eu.outerheaven.certmanager.controller.entity.UserRole
 import eu.outerheaven.certmanager.controller.repository.KeystoreRepository
@@ -101,21 +102,21 @@ class MailService {
         if(addedCertificates.size()>0){
             text = text + "<h2 style=\"color:green;\">Added certificates: </h2>"
             addedCertificates.forEach(r->{
-                text = text + "<p>Certificate with ID ${r.getId()} alias ${r.getAlias()}, subject ${r.getCertificate().getX509Certificate().getSubjectDN()} has been added</p>"
+                text = text + "<p>Keystore certificate with ID ${r.getId()} alias ${r.getAlias()}, subject ${r.getCertificate().getX509Certificate().getSubjectDN()} has been added</p>"
             })
         }
 
         if(modifiedCertificates.size()>0){
             text = text + "<h2 style=\"color:blue;\">Modified certificates: </h2>"
             modifiedCertificates.forEach(r->{
-                text = text + "<p>Certificate with ID ${r.getId()} alias ${r.getAlias()}, subject ${r.getCertificate().getX509Certificate().getSubjectDN()} has been modified</p>"
+                text = text + "<p>Keystore certificate with ID ${r.getId()} alias ${r.getAlias()}, subject ${r.getCertificate().getX509Certificate().getSubjectDN()} has been modified</p>"
             })
         }
 
         if(removedCertificates.size()>0){
             text = text + "<h2 style=\"color:red;\">Removed certificates: </h2>"
             removedCertificates.forEach(r->{
-                text = text + "<p>Certificate with ID ${r.getId()} alias ${r.getAlias()}, subject ${r.getCertificate().getX509Certificate().getSubjectDN()} has been removed</p>"
+                text = text + "<p>Keystore certificate with ID ${r.getId()} alias ${r.getAlias()}, subject ${r.getCertificate().getX509Certificate().getSubjectDN()} has been removed</p>"
             })
         }
         // hard coded a file path
@@ -217,4 +218,56 @@ class MailService {
 
     }
 
+    void sendCertificateExpirationAlert(User user, List<Instance> affectedInstances, List<Keystore> affectedKeystores, List<KeystoreCertificate> affectedKeystoreCertificates, List<StandaloneCertificate> affectedStandaloneCertificates, List<CaCertificate> affectedCaCertificates){
+        MimeMessage msg = javaMailSender.createMimeMessage();
+
+        // true = multipart message
+        MimeMessageHelper helper = new MimeMessageHelper(msg, true);
+
+        List<String> alertEmails = new ArrayList<>()
+        alertEmails.add(user.getEmail())
+
+        String[] setTo = alertEmails.toArray(new String[0])
+
+        helper.setFrom("oscm-controller@croz.net")
+        helper.setTo(setTo);
+
+        helper.setSubject("OSCM Expiration Alert");
+        String text
+        text = "<h1>OSCM has detected certificates that have either expired or are within the expiration warning period</h1>"
+
+
+        affectedInstances.forEach(i->{
+            text = text + "<p> Affected instance name ${i.getName()} and IP ${i.getIp()} </p>"
+            text = text + "<h2 style=\"color:red;\">Expired keystore certificates entries or within expiration warning period: </h2>"
+            LOG.info("Affected keystores size is: {}",affectedKeystores.size())
+            affectedKeystores.forEach(k->{
+                if(k.instance == i){
+                    LOG.info("Affected keystore certificate size is: {}",affectedKeystoreCertificates.size())
+                    affectedKeystoreCertificates.forEach(kc->{
+                        if(kc.keystoreId==k.id){
+                            text = text + "<p>Keystore certificate with ID ${kc.getId()} alias ${kc.getAlias()}, subject ${kc.getCertificate().getX509Certificate().getSubjectDN()} expires on ${kc.getCertificate().getX509Certificate().getNotAfter()}, located under keystore ID ${k.getId()} and path ${k.getLocation()} </p>"
+                        }
+                    })
+                }
+            })
+            affectedStandaloneCertificates.forEach(sc ->{
+                text = text + "<h2 style=\"color:red;\">Expired standalone certificates or within expiration warning period: </h2>"
+                if(sc.instance==i){
+                    text = text + "<p>Standalone certificate with ID ${sc.getId()} alias ${sc.getAlias()}, subject ${sc.getCertificate().getX509Certificate().getSubjectDN()} expires on ${sc.getCertificate().getX509Certificate().getNotAfter()}, located under path ${sc.getPath()} </p>"
+                }
+            })
+        })
+        if(user.userRole==UserRole.ADMIN){
+            affectedCaCertificates.forEach(r->{
+                text = text + "<p>CA certificate with ID ${r.getId()} alias ${r.getAlias()}, subject ${r.getCertificate().getX509Certificate().getSubjectDN()} expires on ${r.getCertificate().getX509Certificate().getNotAfter()} </p>"
+            })
+        }
+
+        helper.setText(text,true)
+
+        javaMailSender.send(msg);
+        LOG.info("Expiration alert email has been sent")
+
+    }
 }
