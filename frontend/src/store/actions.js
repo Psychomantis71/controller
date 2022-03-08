@@ -7,6 +7,7 @@ const actions = {
     const data = {
       username: payload.username,
       password: payload.password,
+      otpCode: payload.otpCode,
     };
     commit('setLoading', true);
     axios.post('http://localhost:8091/login', data)

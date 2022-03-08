@@ -76,4 +76,19 @@ class User {
         this.userRole = userRole
     }
 
+    boolean getMfa() {
+        return mfa
+    }
+
+    void setMfa(boolean mfa) {
+        this.mfa = mfa
+    }
+
+    String getSecret() {
+        return secret
+    }
+
+    void setSecret(String secret) {
+        this.secret = secret
+    }
 }

@@ -53,18 +53,32 @@ class UserController {
         ResponseEntity.ok(service.getUserData(requester))
     }
 
-    @PostMapping("{userId}/change-password")
+    @PostMapping("/{userId}/change-password")
     ResponseEntity changePass(@PathVariable Long userId, @RequestBody UserForm userForm){
         String username = SecurityContextHolder.getContext().getAuthentication().getPrincipal()
         User requester = repository.findByUserName(username)
         ResponseEntity.ok(service.changePassword(userId, requester, userForm))
     }
 
-    @PostMapping("{userId}/change-email")
+    @PostMapping("/{userId}/change-email")
     ResponseEntity changeEmail(@PathVariable Long userId, @RequestBody UserForm userForm){
         String username = SecurityContextHolder.getContext().getAuthentication().getPrincipal()
         User requester = repository.findByUserName(username)
         ResponseEntity.ok(service.changeEmail(userId, requester, userForm))
+    }
+
+    @GetMapping("/{userId}/enable2fa")
+    ResponseEntity enable2fa(@PathVariable Long userId){
+        String username = SecurityContextHolder.getContext().getAuthentication().getPrincipal()
+        User requester = repository.findByUserName(username)
+        ResponseEntity.ok(service.enable2Fa(userId, requester))
+    }
+
+    @PostMapping("/{userId}/validateOtp/{otpCode}")
+    ResponseEntity validateOtp(@PathVariable Long userId, @PathVariable String otpCode){
+        String username = SecurityContextHolder.getContext().getAuthentication().getPrincipal()
+        User requester = repository.findByUserName(username)
+        ResponseEntity.ok(service.validateOtp(userId, requester, otpCode))
     }
 
 

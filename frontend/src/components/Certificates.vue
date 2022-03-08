@@ -217,7 +217,7 @@
                 <br>
                 Signature Hash Algorithm: {{ item.signatureHashAlgorithm }}
                 <br>
-                Private key present in databsae: {{ item.privateKey }}
+                Private key present in database: {{ item.privateKey }}
               </td>
             </template>
           </v-data-table>

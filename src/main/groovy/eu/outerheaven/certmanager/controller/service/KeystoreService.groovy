@@ -223,7 +223,6 @@ class KeystoreService {
     private KeystoreDto addToInstance(KeystoreForm keystoreForm){
         Instance instance = instanceRepository.findById(keystoreForm.getInstanceId()).get()
         PreparedRequest preparedRequest = new PreparedRequest()
-        CertificateLoader certificateLoader = new CertificateLoader()
         RestTemplate restTemplate = new RestTemplate();
         HttpEntity<KeystoreForm> request = new HttpEntity<>(keystoreForm, preparedRequest.getHeader(instance))
         ResponseEntity<KeystoreDto> response
@@ -387,8 +386,5 @@ class KeystoreService {
         }
 
     }
-
-
-
 
 }

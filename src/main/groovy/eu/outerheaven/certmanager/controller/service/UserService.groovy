@@ -18,6 +18,9 @@ class UserService {
     @Autowired
     private final UserRepository repository
 
+    @Autowired
+    private final TotpManager totpManager
+
     List<UserForm> getAll(){
         /*
         List<User> admins = repository.findByUserRole(UserRole.ADMIN)
@@ -67,6 +70,30 @@ class UserService {
             user.setEmail(userForm.email)
             repository.save(user)
             LOG.info("User {} just changed the email of the user {}",requester.userName,user.userName)
+        }
+    }
+
+    String enable2Fa(Long userId, User requester){
+        User user = repository.findById(userId).get()
+        if(user != requester || requester.userRole != UserRole.ADMIN){
+            LOG.error("A user tried to change a email of another user, yet it isnt his own email and the user is not a administrator")
+            throw new Exception("Denied email change")
+        }else{
+            user.setSecret(totpManager.generateSecret())
+            user.setMfa(true)
+            repository.save(user)
+            LOG.info("For the user {} two factor authentication has been enabled by user {}", user.userName, requester.userName)
+            return totpManager.getUriForImage(user.getSecret())
+        }
+    }
+
+    boolean validateOtp(Long userId, User requester, String otpCode){
+        User user = repository.findById(userId).get()
+        if(user != requester || requester.userRole != UserRole.ADMIN){
+            LOG.error("A user tried to change a email of another user, yet it isnt his own email and the user is not a administrator")
+            throw new Exception("Denied email change")
+        }else{
+            return totpManager.verifyCode(otpCode,user.getSecret())
         }
     }
 

@@ -147,6 +147,33 @@
               </v-card-actions>
             </v-card>
           </v-dialog>
+          <br>
+          <v-btn
+            dark
+            color="teal lighten-1"
+            class="ma-2"
+            @click="enable2fa"
+          >
+            Enable 2FA
+          </v-btn>
+          <div v-if="qrCode !== ''">
+            <img v-bind:src="qrCode" />
+          </div>
+
+          <v-text-field
+            v-model="otpCode"
+            color="purple darken-2"
+            label="Otp code"
+            required
+          ></v-text-field>
+          <v-btn
+            dark
+            color="teal lighten-1"
+            class="ma-2"
+            @click="validateOtp"
+          >
+            Validate OTP
+          </v-btn>
 
         </h2>
 
@@ -159,6 +186,8 @@
 export default {
   data() {
     return {
+      otpCode:"",
+      qrCode:'',
       dialogPwdChange: false,
       dialogEmailChange: false,
       rules: {
@@ -216,6 +245,29 @@ export default {
         .then((response) => {
           console.log(response)
           this.getUserData();
+        })
+        .catch((error) => {
+          this.alert = true;
+          console.log(error)
+        });
+    },
+    enable2fa() {
+      this.$axios
+        .get(`http://localhost:8091/api/user/${this.userData.id}/enable2fa`)
+        .then((response) => {
+          console.log(response.data)
+          this.qrCode = response.data;
+        })
+        .catch((error) => {
+          this.alert = true;
+          console.log(error)
+        });
+    },
+    validateOtp() {
+      this.$axios
+        .post(`http://localhost:8091/api/user/${this.userData.id}/validateOtp/${this.otpCode}`)
+        .then((response) => {
+          console.log(response.data)
         })
         .catch((error) => {
           this.alert = true;

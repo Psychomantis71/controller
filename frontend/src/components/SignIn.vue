@@ -46,6 +46,21 @@
                 required
               />
             </v-flex>
+            <v-flex>
+              <v-checkbox
+                v-model="otpcheckbox"
+                label="OTP"
+                value="John"
+              ></v-checkbox>
+              <v-text-field
+                id="otpCode"
+                v-model="otpCode"
+                name="otpCode"
+                label="OTP"
+                type="text"
+                v-if="otpcheckbox"
+              />
+            </v-flex>
             <v-flex
               class="text-center"
               mt-5
@@ -71,6 +86,8 @@
 export default {
   data() {
     return {
+      otpcheckbox:false,
+      otpCode:'',
       username: '',
       password: '',
       alert: false,
@@ -98,7 +115,7 @@ export default {
   },
   methods: {
     userSignIn() {
-      this.$store.dispatch('userSignIn', { username: this.username, password: this.password });
+      this.$store.dispatch('userSignIn', { username: this.username, password: this.password, otpCode: this.otpCode });
     },
   },
 };
