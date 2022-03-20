@@ -135,7 +135,8 @@ class UserService {
                 id: user.id,
                 username: user.userName,
                 userRole: user.userRole,
-                email: user.email
+                email: user.email,
+                twoFactorAuth: user.mfa
         )
         return userForm
     }

@@ -3,6 +3,7 @@ package eu.outerheaven.certmanager.controller.config
 import eu.outerheaven.certmanager.controller.security.JWTAuthenticationFilter;
 import eu.outerheaven.certmanager.controller.security.JWTLoginFilter
 import eu.outerheaven.certmanager.controller.service.UserPrincipalDetailsService
+import eu.outerheaven.certmanager.controller.util.CustomFilter
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -10,7 +11,6 @@ import org.springframework.security.config.annotation.authentication.builders.Au
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter
-import org.springframework.security.core.userdetails.UserDetailsService
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
@@ -18,8 +18,6 @@ import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource
-
-import javax.sql.DataSource;
 
 
 
@@ -46,6 +44,7 @@ public class WebSecurityConfiguration extends WebSecurityConfigurerAdapter {
 
     @Override
     protected void configure(HttpSecurity http) throws Exception {
+        CustomFilter customFilter = new CustomFilter()
         http
                 .cors()
                 .and()
@@ -58,8 +57,10 @@ public class WebSecurityConfiguration extends WebSecurityConfigurerAdapter {
                 .antMatchers("/secured/**").hasAnyAuthority("USER", "ADMIN")
                 .antMatchers("/**").permitAll()
                 .and()
-                .addFilterBefore(new JWTLoginFilter("/login", authenticationManager()), UsernamePasswordAuthenticationFilter.class)
-                .addFilterBefore(new JWTAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jWTLoginFilter(), UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(new JWTAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(customFilter, JWTLoginFilter.class)
+                //.addFilterAfter(contentCachingFilter, JWTLoginFilter.class)
     }
 
     @Override
@@ -90,6 +91,10 @@ public class WebSecurityConfiguration extends WebSecurityConfigurerAdapter {
         return new BCryptPasswordEncoder()
     }
 
+    @Bean
+    JWTLoginFilter jWTLoginFilter() throws Exception {
+        return new JWTLoginFilter("/login", authenticationManager());
+    }
 
 
 }

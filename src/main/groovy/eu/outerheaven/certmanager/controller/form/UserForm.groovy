@@ -16,4 +16,6 @@ class UserForm {
 
     String email
 
+    Boolean twoFactorAuth
+
 }

@@ -147,15 +147,29 @@
               </v-card-actions>
             </v-card>
           </v-dialog>
+        </h2>
           <br>
-          <v-btn
+
+          <h2>Two factor authentication: {{userData.twoFactorAuth}}
+        <v-btn
             dark
             color="teal lighten-1"
             class="ma-2"
             @click="enable2fa"
+            v-if="userData.twoFactorAuth===false"
           >
             Enable 2FA
           </v-btn>
+            <v-btn
+              dark
+              color="teal lighten-1"
+              class="ma-2"
+              @click="enable2fa"
+              v-if="userData.twoFactorAuth===true"
+            >
+              Disable 2FA
+            </v-btn>
+          </h2>
           <div v-if="qrCode !== ''">
             <img v-bind:src="qrCode" />
           </div>
@@ -175,7 +189,7 @@
             Validate OTP
           </v-btn>
 
-        </h2>
+
 
       </v-flex>
     </v-layout>
@@ -207,6 +221,7 @@ export default {
         password:'',
         userRole: '',
         email: '',
+        twoFactorAuth:'',
       }
     };
   },
