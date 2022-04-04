@@ -365,26 +365,6 @@ class KeystoreService {
 
     }
 
-    //TODO feature
-    void retrieveFromAgent(RetrieveFromPortForm retrieveFromPortForm){
-        try{
-            Instance instance = instanceRepository.findById(retrieveFromPortForm.instanceId).get()
-            PreparedRequest preparedRequest = new PreparedRequest()
-            RestTemplate restTemplate = new RestTemplate();
-            HttpEntity<RetrieveFromPortForm> request = new HttpEntity<>(retrieveFromPortForm, preparedRequest.getHeader(instance))
 
-            ResponseEntity<List<CertificateDto>> response = restTemplate.exchange(
-                    instance.getAccessUrl() + api_url + "/retrieve-port",
-                    HttpMethod.POST,
-                    request,
-                    new ParameterizedTypeReference<List<CertificateDto>>(){}
-            )
-            List<CertificateDto> responseForms = response.getBody()
-            LOG.info("Agent with ip {}, hostname {} and port {} has added a new keystore!",instance.getIp(),instance.getHostname(),instance.getPort())
-        } catch(Exception e){
-            LOG.error("Adding keystore to agent failed with error " + e )
-        }
-
-    }
 
 }

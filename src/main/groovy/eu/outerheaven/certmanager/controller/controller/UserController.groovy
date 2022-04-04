@@ -74,6 +74,14 @@ class UserController {
         ResponseEntity.ok(service.enable2Fa(userId, requester))
     }
 
+    @GetMapping("/{userId}/disable2fa")
+    ResponseEntity disable2fa(@PathVariable Long userId){
+        String username = SecurityContextHolder.getContext().getAuthentication().getPrincipal()
+        User requester = repository.findByUserName(username)
+        ResponseEntity.ok(service.disable2Fa(userId, requester))
+    }
+
+
     @PostMapping("/{userId}/validateOtp/{otpCode}")
     ResponseEntity validateOtp(@PathVariable Long userId, @PathVariable String otpCode){
         String username = SecurityContextHolder.getContext().getAuthentication().getPrincipal()

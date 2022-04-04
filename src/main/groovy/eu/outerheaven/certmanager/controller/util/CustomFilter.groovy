@@ -13,7 +13,7 @@ class CustomFilter implements Filter {
     @Override
     void doFilter(ServletRequest request, ServletResponse response,
                          FilterChain chain) throws IOException, ServletException {
-
+        //TODO this causes every request to be read twice, while only needed for login, needs to be optimised
         /* wrap the request in order to read the inputstream multiple times */
         CachedBodyHttpServletRequest multiReadRequest = new CachedBodyHttpServletRequest((HttpServletRequest) request);
 

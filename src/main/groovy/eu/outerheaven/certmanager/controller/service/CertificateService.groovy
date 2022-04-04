@@ -1,16 +1,35 @@
 package eu.outerheaven.certmanager.controller.service
 
+import eu.outerheaven.certmanager.controller.dto.CertificateDto
+import eu.outerheaven.certmanager.controller.dto.RetrieveFromPortDto
 import eu.outerheaven.certmanager.controller.entity.Certificate
+import eu.outerheaven.certmanager.controller.entity.Instance
+import eu.outerheaven.certmanager.controller.entity.KeystoreCertificate
 import eu.outerheaven.certmanager.controller.form.CertificateFormGUI
+import eu.outerheaven.certmanager.controller.form.RetrieveFromPortForm
 import eu.outerheaven.certmanager.controller.repository.CertificateRepository
+import eu.outerheaven.certmanager.controller.repository.InstanceRepository
+import eu.outerheaven.certmanager.controller.util.CertificateLoader
+import eu.outerheaven.certmanager.controller.util.PreparedRequest
+import org.apache.tomcat.util.http.fileupload.FileUtils
 import org.bouncycastle.jce.interfaces.ECPublicKey
 import org.bouncycastle.jce.provider.JCEECPublicKey
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.core.ParameterizedTypeReference
 import org.springframework.core.env.Environment
+import org.springframework.core.io.ByteArrayResource
+import org.springframework.core.io.Resource
+import org.springframework.http.HttpEntity
+import org.springframework.http.HttpMethod
+import org.springframework.http.ResponseEntity
 import org.springframework.stereotype.Service
+import org.springframework.web.client.RestTemplate
 
+import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.Paths
 import java.security.PublicKey
 import java.security.cert.CertificateParsingException
 import java.security.cert.X509Certificate
@@ -23,6 +42,8 @@ import java.time.ZoneId
 @Service
 class CertificateService {
 
+    String api_url="/api/certificate"
+
     private final Logger LOG = LoggerFactory.getLogger(CertificateService)
 
     @Autowired
@@ -30,6 +51,9 @@ class CertificateService {
 
     @Autowired
     private final Environment environment
+
+    @Autowired
+    private final InstanceRepository instanceRepository
 
     CertificateFormGUI toFormGUI(Certificate certificate){
         String certstat = certStatus(certificate.x509Certificate.notBefore,certificate.x509Certificate.notAfter)
@@ -177,6 +201,88 @@ class CertificateService {
 
     void getExtendedKeyUsageList(X509Certificate certificate){
 
+    }
+
+
+    List<Certificate> retrieveFromAgent(RetrieveFromPortForm retrieveFromPortForm){
+        try{
+            Instance instance = instanceRepository.findById(retrieveFromPortForm.instanceId).get()
+            PreparedRequest preparedRequest = new PreparedRequest()
+            RestTemplate restTemplate = new RestTemplate();
+            RetrieveFromPortDto retrieveFromPortDto = new RetrieveFromPortDto(
+                    hostname: retrieveFromPortForm.hostname,
+                    port: retrieveFromPortForm.port
+            )
+            HttpEntity<RetrieveFromPortDto> request = new HttpEntity<>(retrieveFromPortDto, preparedRequest.getHeader(instance))
+
+            ResponseEntity<List<CertificateDto>> response = restTemplate.exchange(
+                    instance.getAccessUrl() + api_url + "/retrieve-from-port",
+                    HttpMethod.POST,
+                    request,
+                    new ParameterizedTypeReference<List<CertificateDto>>(){}
+            )
+            List<CertificateDto> responseForms = response.getBody()
+            LOG.info("Retrieved something from port")
+            List<Certificate> certificates = toClass(responseForms)
+            return certificates
+        } catch(Exception e){
+            LOG.error("Failed to retrieve something from port" + e )
+        }
+
+    }
+
+    Resource exportAsPem(Certificate certificate, String filename){
+        CertificateLoader certificateLoader = new CertificateLoader()
+        String folderName = certificateLoader.generateRandomName()
+        Path path = Paths.get(folderName)
+        while (Files.exists(path)){
+            folderName = certificateLoader.generateRandomName()
+            path=Paths.get(folderName)
+        }
+        try{
+            new File(path.toString()).mkdirs()
+            certificateLoader.writeCertToFileBase64Encoded(certificate.getX509Certificate(),folderName + "/" + filename)
+            if(certificate.privateKey != null){
+                certificateLoader.writeKeyToFileBase64Encoded(certificate.getPrivateKey(), folderName + "/" + filename)
+            }
+            String fullPath =  "./" + folderName + "/" + filename
+            LOG.info("Path to the file is " + fullPath)
+            path = Paths.get(folderName + "/" + filename)
+            File file = new File(folderName + "/" + filename)
+            byte[] fileContent = Files.readAllBytes(file.toPath())
+
+            //Resource resource = new UrlResource(path.toUri())
+            Resource resource = new ByteArrayResource(fileContent)
+            FileUtils.deleteDirectory(path.getParent().toFile())
+            return resource
+        }catch(Exception exception){
+            LOG.error("Failed exporting certificate:" + exception)
+        }
+    }
+
+    //Frontend needs some key values to sort by, only for retrival function!
+    List<Certificate> assignIds(List<Certificate> certificates){
+        for(Integer i=0; i<certificates.size();i++){
+            certificates.get(i).setId(i)
+        }
+        return certificates
+    }
+
+    Certificate toClass(CertificateDto certificateDto){
+        CertificateLoader certificateLoader = new CertificateLoader()
+        Certificate certificate = new Certificate(
+                x509Certificate: certificateLoader.decodeX509(certificateDto.encodedX509Certificate),
+                privateKey: certificateLoader.decodeKey(certificateDto.encodedPrivateKey),
+
+        )
+        return certificate
+    }
+    List<Certificate> toClass(List<CertificateDto> certificateDtos){
+        List<Certificate> certificates = new ArrayList<>()
+        certificateDtos.forEach(r->{
+            certificates.add(toClass(r))
+        })
+        return certificates
     }
 
 

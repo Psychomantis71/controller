@@ -164,7 +164,7 @@
               dark
               color="teal lighten-1"
               class="ma-2"
-              @click="enable2fa"
+              @click="disable2fa"
               v-if="userData.twoFactorAuth===true"
             >
               Disable 2FA
@@ -272,6 +272,17 @@ export default {
         .then((response) => {
           console.log(response.data)
           this.qrCode = response.data;
+        })
+        .catch((error) => {
+          this.alert = true;
+          console.log(error)
+        });
+    },
+    disable2fa() {
+      this.$axios
+        .get(`http://localhost:8091/api/user/${this.userData.id}/disable2fa`)
+        .then((response) => {
+          console.log(response.data)
         })
         .catch((error) => {
           this.alert = true;

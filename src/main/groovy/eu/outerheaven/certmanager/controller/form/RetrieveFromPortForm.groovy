@@ -8,7 +8,9 @@ class RetrieveFromPortForm {
     Integer port
     String hostname
     Long instanceId
+    Boolean fromController
     Boolean save
+    Boolean download
     List<KeystoreFormGUI> keystoreFormGUIS
 
 }

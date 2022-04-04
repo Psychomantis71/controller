@@ -76,14 +76,27 @@ class UserService {
     String enable2Fa(Long userId, User requester){
         User user = repository.findById(userId).get()
         if(user != requester || requester.userRole != UserRole.ADMIN){
-            LOG.error("A user tried to change a email of another user, yet it isnt his own email and the user is not a administrator")
-            throw new Exception("Denied email change")
+            LOG.error("A user tried to change a 2FA status of another user, yet it isn't his own status and the user is not a administrator")
+            throw new Exception("Denied 2FA enabling")
         }else{
             user.setSecret(totpManager.generateSecret())
             user.setMfa(true)
             repository.save(user)
             LOG.info("For the user {} two factor authentication has been enabled by user {}", user.userName, requester.userName)
             return totpManager.getUriForImage(user.getSecret())
+        }
+    }
+
+    void disable2Fa(Long userId, User requester){
+        User user = repository.findById(userId).get()
+        if(user != requester || requester.userRole != UserRole.ADMIN){
+            LOG.error("A user tried to change a 2FA status of another user, yet it isn't his own status and the user is not a administrator")
+            throw new Exception("Denied email change")
+        }else{
+            user.setMfa(false)
+            user.setSecret(null)
+            repository.save(user)
+            LOG.info("For the user {} two factor authentication has been disabled by user {}", user.userName, requester.userName)
         }
     }
 

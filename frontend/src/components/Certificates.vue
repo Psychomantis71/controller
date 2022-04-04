@@ -154,6 +154,145 @@
             </v-card-actions>
           </v-card>
         </v-dialog>
+        <v-dialog
+          v-model="dialogRetrieveFromPort"
+          max-width="1000px"
+        >
+          <template v-slot:activator="{ on, attrs }">
+            <v-btn
+              dark
+              color="teal lighten-1"
+              class="ma-2"
+              v-bind="attrs"
+              v-on="on"
+              @click="getInstanceData"
+            >
+              Retrieve from port
+            </v-btn>
+          </template>
+          <v-card>
+            <v-card-title>
+              <span class="text-h5">Retrieve from port</span>
+            </v-card-title>
+
+            <v-card-text>
+              <v-container>
+                <v-row>
+                  <v-col
+                    cols="12"
+                    sm="6"
+                    md="6"
+                  >
+                    <v-select
+                      v-model="retrieveItem.fromController"
+                      :items="retrievalFromOptions"
+                      label="Try retrival from:"
+                      item-value="choiceValue"
+                      item-text="choiceName"
+                    ></v-select>
+                    <v-autocomplete
+                      v-model="retrieveItem.instanceId"
+                      :items="instances"
+                      outlined
+                      dense
+                      chips
+                      small-chips
+                      label="Select instance"
+                      item-value="id"
+                      item-text="hostname"
+                      v-if="!retrieveItem.fromController"
+                    />
+                  </v-col>
+                  <v-col
+                    cols="12"
+                    sm="6"
+                    md="6"
+                  >
+                    <v-text-field
+                      v-model="retrieveItem.hostname"
+                      label="Hostname or IP"
+                      name="hostnameField"
+                    />
+                    <v-text-field
+                      v-model="retrieveItem.port"
+                      label="Port"
+                      name="portField"
+                    />
+                  </v-col>
+                </v-row>
+                <v-row
+                >
+                  <v-data-table
+                    v-model="retrieveFromSelected"
+                    :headers="retrieveFromHeaders"
+                    :items="retrieveFromItems"
+                    :search="search"
+                    :expanded.sync="expanded"
+                    show-select
+                    show-expand
+                    class="elevation-1"
+                    item-key="id"
+                    v-if="retrieveFromItems!==null"
+                  >
+                    <template v-slot:item.status="{ item }">
+                      <v-chip
+                        :color="getStatusColor(item.status)"
+                        dark
+                      >
+                        {{ item.status }}
+                      </v-chip>
+                    </template>
+                    <template v-slot:expanded-item="{ item }">
+                      <td :colspan="headers.length">
+                        Subject: {{ item.subject }}
+                        <br>
+                        Issuer: {{ item.issuer }}
+                        <br>
+                        Valid from: {{ item.validFrom }}
+                        <br>
+                        Valid to: {{ item.validTo }}
+                        <br>
+                        Serial: {{ item.serial }}
+                        <br>
+                        <div v-if="item.alternativeNameDNS !== null && item.alternativeNameDNS !=='' ">
+                          <v-chip>Alternative DNS: {{ item.alternativeNameDNS }}</v-chip>
+                          <br>
+                        </div>
+                        <div v-if="item.alternativeNameIP !== null && item.alternativeNameIP !=='' ">
+                          <v-chip>Alternative IP: {{ item.alternativeNameIP }}</v-chip>
+                          <br>
+                        </div>
+                        Keysize: {{ item.keysize }}
+                        <br>
+                        Signature: {{ item.signature }}
+                        <br>
+                        Signature Hash Algorithm: {{ item.signatureHashAlgorithm }}
+                      </td>
+                    </template>
+                  </v-data-table>
+                </v-row>
+              </v-container>
+            </v-card-text>
+
+            <v-card-actions>
+              <v-spacer />
+              <v-btn
+                color="blue darken-1"
+                text
+                @click="closeRetrieveFrom"
+              >
+                Cancel
+              </v-btn>
+              <v-btn
+                color="blue darken-1"
+                text
+                @click="tryRetrieveFrom"
+              >
+                Retrieve
+              </v-btn>
+            </v-card-actions>
+          </v-card>
+        </v-dialog>
         <v-card>
           <v-card-title>
             <v-text-field
@@ -231,12 +370,15 @@
 export default {
   data() {
     return {
+      instances:[],
       certificatelist: [],
       fileToUpload:null,
       dialogImportCert:false,
       keystores: [],
       show1: false,
       selected: [],
+      retrieveFromSelected:[],
+      retrieveFromItems:null,
       rules: {
         required: (value) => !!value || 'Required.',
       },
@@ -252,9 +394,33 @@ export default {
         { text: 'Status', value: 'status' },
         { text: '', value: 'data-table-expand' },
       ],
+      retrieveFromHeaders: [
+        {
+          text: 'ID',
+          align: 'start',
+          value: 'id',
+        },
+        { text: 'Subject', value: 'subject' },
+        { text: 'Status', value: 'status' },
+        {text:'Valid to', value: 'validTo'},
+        { text: '', value: 'data-table-expand' },
+      ],
       importOptions:[ { choiceName: 'PEM certificate', choiceValue: 'PEM' },
         { choiceName: 'PKCS12', choiceValue: 'PKCS12' },
       ],
+      retrievalFromOptions:[ { choiceName: 'Controller', choiceValue: true },
+        { choiceName: 'Instance', choiceValue: false },
+      ],
+      dialogRetrieveFromPort:false,
+      retrieveItem:{
+        fromController: true,
+        save:false,
+        download: false,
+        port:443,
+        hostname:"localhost",
+        instanceId:null,
+        keystoreFormGUIS:[]
+      },
       importFormat:[],
       searchKeystore: '',
       importItem: {
@@ -298,7 +464,7 @@ export default {
     },
     removeCertificates() {
       this.$axios
-        .post('http://localhost:8091/api/keystore-certificate/remove',this.selected)
+        .post('http://localhost:8091/api/certificate/remove',this.selected)
         .then((response) => {
           console.log(response)
         })
@@ -310,7 +476,7 @@ export default {
     },
     exportCertificatePEM() {
       this.$axios
-        .get(`http://localhost:8091/api/keystore-certificate/${this.selected[0].id}/export-pem`)
+        .get(`http://localhost:8091/api/certificate/${this.selected[0].id}/export-pem`)
         .then((response) => {
           let filetodownload = response.headers['content-disposition'].split('filename=')[1].split(';')[0];
           filetodownload = filetodownload.substring(1, filetodownload.length-1)
@@ -384,12 +550,48 @@ export default {
         }
       );
     },
+    getInstanceData() {
+      this.$axios
+        .get('http://localhost:8091/api/instance/all')
+        .then((response) => {
+          console.log('Get response: ', response.data);
+          this.instances = response.data;
+        })
+        .catch((error) => {
+          this.alert = true;
+          this.instances = error;
+        });
+    },
+    retrieveFromPortData() {
+      this.$axios
+        .post('http://localhost:8091/api/certificate/retrieve-from-port',this.retrieveItem)
+        .then((response) => {
+          this.retrieveFromItems = response.data;
+          for (let index = 0; index < this.retrieveFromItems.length; ++index) {
+            this.retrieveFromItems[index].validTo = this.retrieveFromItems[index].validTo.substring(0,10)
+          }
+
+
+          console.log(response)
+        })
+        .catch((error) => {
+          this.alert = true;
+          console.log(error)
+        });
+    },
     saveImportCert() {
       this.uploadFile();
       this.closeImportCert();
     },
     closeImportCert() {
       this.dialogImportCert = false;
+    },
+    closeRetrieveFrom() {
+      this.dialogRetrieveFromPort = false;
+    },
+    tryRetrieveFrom() {
+      this.retrieveFromPortData();
+      console.log(this.retrieveItem)
     },
   },
 };

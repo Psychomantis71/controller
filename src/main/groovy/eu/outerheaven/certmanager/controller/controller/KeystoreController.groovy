@@ -53,16 +53,4 @@ class KeystoreController {
         return ResponseEntity.ok(service.delete(keystoreFormGUIS))
     }
 
-    @PostMapping("/retrieve-port")
-    ResponseEntity retrieveFromPort(@RequestBody RetrieveFromPortForm retrieveFromPortForm){
-        if(retrieveFromPortForm.instanceId==0){
-            CertificateLoader certificateLoader = new CertificateLoader()
-            List<Certificate> certificates = certificateLoader.loadCertificatesFromHost(retrieveFromPortForm.getHostname(), retrieveFromPortForm.getPort())
-        }else{
-
-        }
-    }
-
-
-
 }
