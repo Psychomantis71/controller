@@ -40,6 +40,25 @@ class CertificateController {
             ResponseEntity.ok().body(service.toFormGUI(certificates))
         }
     }
+
+
+    @GetMapping("/retrieve-and-download")
+    ResponseEntity<Resource> exportAsFile(@RequestBody RetrieveFromPortForm retrieveFromPortForm){
+
+        LOG.info("Export pem controller called")
+        String filename = service.getCleanCertName(certificateId)
+        Resource resource = service.exportAsPem(certificateId, filename)
+
+        try{
+            LOG.info("Filename on response is:" + filename)
+            ResponseEntity.ok().header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"").body(resource)
+        }catch(Exception exception){
+            LOG.error("Error while exporting file: " + exception)
+        }
+
+    }
+
+
     /*
     @PostMapping("/retrieve-from-port/download")
     ResponseEntity<Resource> exportAsFile(@RequestBody RetrieveFromPortForm retrieveFromPortForm){

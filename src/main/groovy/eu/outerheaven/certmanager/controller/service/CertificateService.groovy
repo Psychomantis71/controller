@@ -38,6 +38,8 @@ import java.security.interfaces.RSAPublicKey
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
+import java.util.zip.ZipEntry
+import java.util.zip.ZipOutputStream
 
 @Service
 class CertificateService {
@@ -259,6 +261,64 @@ class CertificateService {
             LOG.error("Failed exporting certificate:" + exception)
         }
     }
+
+    static void pack(String sourceDirPath, String zipFilePath) throws IOException {
+        Path p = Files.createFile(Paths.get(zipFilePath));
+        try (ZipOutputStream zs = new ZipOutputStream(Files.newOutputStream(p))) {
+            Path pp = Paths.get(sourceDirPath);
+            Files.walk(pp)
+                    .filter(path -> !Files.isDirectory(path))
+                    .forEach(path -> {
+                        ZipEntry zipEntry = new ZipEntry(pp.relativize(path).toString());
+                        try {
+                            zs.putNextEntry(zipEntry);
+                            Files.copy(path, zs);
+                            zs.closeEntry();
+                        } catch (IOException e) {
+                            System.err.println(e);
+                        }
+                    });
+        }
+    }
+
+    public static void test(){
+        zipFolder(new File("/Users/shanewhitehead/exports"),
+                new File("FolderZiper.zip"));
+    }
+
+    public void zipFolder(File srcFolder, File destZipFile) throws Exception {
+        try (FileOutputStream fileWriter = new FileOutputStream(destZipFile);
+             ZipOutputStream zip = new ZipOutputStream(fileWriter)) {
+
+            addFolderToZip(srcFolder, srcFolder, zip);
+        }
+    }
+
+    private void addFileToZip(File rootPath, File srcFile, ZipOutputStream zip) throws Exception {
+
+        if (srcFile.isDirectory()) {
+            addFolderToZip(rootPath, srcFile, zip);
+        } else {
+            byte[] buf = new byte[1024];
+            int len;
+            try ( FileInputStream input = new FileInputStream(srcFile) ) {
+                String name = srcFile.getPath();
+                name = name.replace(rootPath.getPath(), "");
+                System.out.println("Zip " + srcFile + "\n to " + name);
+                zip.putNextEntry(new ZipEntry(name));
+                while ((len = input.read(buf)) > 0) {
+                    zip.write(buf, 0, len);
+                }
+            }
+        }
+    }
+
+    private void addFolderToZip(File rootPath, File srcFolder, ZipOutputStream zip) throws Exception {
+        for (File fileName : srcFolder.listFiles()) {
+            addFileToZip(rootPath, fileName, zip);
+        }
+    }
+
 
     //Frontend needs some key values to sort by, only for retrival function!
     List<Certificate> assignIds(List<Certificate> certificates){
