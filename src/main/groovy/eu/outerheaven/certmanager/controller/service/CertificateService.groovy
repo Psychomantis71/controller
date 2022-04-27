@@ -262,6 +262,44 @@ class CertificateService {
         }
     }
 
+
+    Resource exportAsZip(List<Certificate> certificates){
+        certificates = assignIds(certificates)
+        CertificateLoader certificateLoader = new CertificateLoader()
+        String folderName = certificateLoader.generateRandomName()
+        Path path = Paths.get(folderName)
+        while (Files.exists(path)){
+            folderName = certificateLoader.generateRandomName()
+            path=Paths.get(folderName)
+        }
+        try{
+            new File(path.toString()).mkdirs()
+
+            certificates.forEach( certificate -> {
+                certificateLoader.writeCertToFileBase64Encoded(certificate.getX509Certificate(),folderName + "/certificate" + certificate.id.toString() )
+                if(certificate.privateKey != null){
+                    certificateLoader.writeKeyToFileBase64Encoded(certificate.getPrivateKey(), folderName + "/certificate" + certificate.id.toString() )
+                }
+            })
+            zipFolder(new File("./" + folderName), new File("./" + folderName + ".zip"))
+
+            String fullPath =  "./" + folderName + "/" + filename
+            LOG.info("Path to the file is " + fullPath)
+            path = Paths.get(folderName + "/" + filename)
+            File file = new File(folderName + "/" + filename)
+            byte[] fileContent = Files.readAllBytes(file.toPath())
+
+            //Resource resource = new UrlResource(path.toUri())
+            Resource resource = new ByteArrayResource(fileContent)
+            FileUtils.deleteDirectory(path.getParent().toFile())
+            return resource
+        }catch(Exception exception){
+            LOG.error("Failed exporting certificate:" + exception)
+        }
+    }
+
+
+
     static void pack(String sourceDirPath, String zipFilePath) throws IOException {
         Path p = Files.createFile(Paths.get(zipFilePath));
         try (ZipOutputStream zs = new ZipOutputStream(Files.newOutputStream(p))) {
@@ -320,7 +358,7 @@ class CertificateService {
     }
 
 
-    //Frontend needs some key values to sort by, only for retrival function!
+    //Frontend needs some key values to sort by, only for retrieve from port function!
     List<Certificate> assignIds(List<Certificate> certificates){
         for(Integer i=0; i<certificates.size();i++){
             certificates.get(i).setId(i)
