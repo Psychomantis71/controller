@@ -284,7 +284,7 @@ class CertificateLoader {
     void writeCertToFileBase64Encoded(X509Certificate certificate, String fileName) throws Exception {
         FileOutputStream certificateOut = new FileOutputStream(fileName)
         String certData = new String(Base64.getEncoder().encode(certificate.getEncoded()))
-        certData = certData.replaceAll("(.{67})", "\$1\n")
+        certData = certData.replaceAll("(.{64})", "\$1\n")
         certificateOut.write("-----BEGIN CERTIFICATE-----\n".getBytes())
         certificateOut.write(certData.getBytes())
         certificateOut.write("\n-----END CERTIFICATE-----".getBytes())
@@ -294,7 +294,7 @@ class CertificateLoader {
     void writeKeyToFileBase64Encoded(PrivateKey privateKey, String fileName) throws Exception {
         FileOutputStream certificateOut = new FileOutputStream(new File(fileName),true)
         String keyData = new String(Base64.getEncoder().encode(privateKey.getEncoded()))
-        keyData = keyData.replaceAll("(.{67})", "\$1\n")
+        keyData = keyData.replaceAll("(.{64})", "\$1\n")
         certificateOut.write("\n-----BEGIN PRIVATE KEY-----\n".getBytes())
         //certificateOut.write(Base64.encode(certificate.getEncoded()))
         certificateOut.write(keyData.getBytes())
