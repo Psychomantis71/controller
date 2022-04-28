@@ -4,6 +4,8 @@ import eu.outerheaven.certmanager.controller.entity.Certificate
 import eu.outerheaven.certmanager.controller.form.RetrieveFromPortForm
 import eu.outerheaven.certmanager.controller.service.CertificateService
 import eu.outerheaven.certmanager.controller.util.CertificateLoader
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.core.io.Resource
 import org.springframework.http.HttpHeaders
@@ -18,6 +20,8 @@ import org.springframework.web.bind.annotation.RestController
 @RestController
 @RequestMapping("/api/certificate")
 class CertificateController {
+
+    private final Logger LOG = LoggerFactory.getLogger(CertificateController)
 
     @Autowired
     private final CertificateService service
@@ -42,18 +46,21 @@ class CertificateController {
     }
 
 
-    @GetMapping("/retrieve-and-download")
+    @PostMapping("/retrieve-and-download")
     ResponseEntity<Resource> exportAsFile(@RequestBody RetrieveFromPortForm retrieveFromPortForm){
 
-        LOG.info("Export pem controller called")
-        String filename = service.getCleanCertName(certificateId)
-        Resource resource = service.exportAsPem(certificateId, filename)
-
-        try{
-            LOG.info("Filename on response is:" + filename)
-            ResponseEntity.ok().header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"").body(resource)
-        }catch(Exception exception){
-            LOG.error("Error while exporting file: " + exception)
+        LOG.info("Tried retrieve and download")
+        if(retrieveFromPortForm.fromController){
+            CertificateLoader certificateLoader = new CertificateLoader()
+            List<Certificate> certificates = certificateLoader.loadCertificatesFromHost(retrieveFromPortForm.getHostname(), retrieveFromPortForm.getPort())
+            certificates = service.assignIds(certificates)
+            Resource resource =  service.exportAsZip(certificates)
+            ResponseEntity.ok().header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + "certs.zip" + "\"").body(resource)
+        }else{
+            List<Certificate> certificates = service.retrieveFromAgent(retrieveFromPortForm)
+            certificates = service.assignIds(certificates)
+            Resource resource =  service.exportAsZip(certificates)
+            ResponseEntity.ok().header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + "certs.zip" + "\"").body(resource)
         }
 
     }

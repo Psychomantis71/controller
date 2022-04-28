@@ -286,6 +286,13 @@
               <v-btn
                 color="blue darken-1"
                 text
+                @click="exportCertificateZip"
+              >
+                Download
+              </v-btn>
+              <v-btn
+                color="blue darken-1"
+                text
                 @click="tryRetrieveFrom"
               >
                 Retrieve
@@ -482,6 +489,30 @@ export default {
           filetodownload = filetodownload.substring(1, filetodownload.length-1)
           console.log(filetodownload);
           var fileURL = window.URL.createObjectURL(new Blob([response.data]));
+          var fileLink = document.createElement('a');
+
+          fileLink.href = fileURL;
+          fileLink.setAttribute('download', filetodownload);
+          document.body.appendChild(fileLink);
+
+          fileLink.click();
+
+        })
+        .catch((error) => {
+          this.alert = true;
+          console.log(error)
+        });
+    },
+    exportCertificateZip() {
+      this.$axios
+        .post('http://localhost:8091/api/certificate/retrieve-and-download', this.retrieveItem, {
+          responseType: 'blob'
+        })
+        .then((response) => {
+          let filetodownload = response.headers['content-disposition'].split('filename=')[1].split(';')[0];
+          filetodownload = filetodownload.substring(1, filetodownload.length-1)
+          console.log(filetodownload);
+          var fileURL = window.URL.createObjectURL(new Blob([response.data], {type: 'application/zip'}));
           var fileLink = document.createElement('a');
 
           fileLink.href = fileURL;

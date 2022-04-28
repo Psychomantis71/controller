@@ -38,6 +38,7 @@ import java.security.interfaces.RSAPublicKey
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
+import java.util.logging.FileHandler
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 
@@ -264,7 +265,6 @@ class CertificateService {
 
 
     Resource exportAsZip(List<Certificate> certificates){
-        certificates = assignIds(certificates)
         CertificateLoader certificateLoader = new CertificateLoader()
         String folderName = certificateLoader.generateRandomName()
         Path path = Paths.get(folderName)
@@ -276,55 +276,31 @@ class CertificateService {
             new File(path.toString()).mkdirs()
 
             certificates.forEach( certificate -> {
-                certificateLoader.writeCertToFileBase64Encoded(certificate.getX509Certificate(),folderName + "/certificate" + certificate.id.toString() )
+                certificateLoader.writeCertToFileBase64Encoded(certificate.getX509Certificate(),folderName + "/certificate" + certificate.id.toString() +".cer" )
                 if(certificate.privateKey != null){
-                    certificateLoader.writeKeyToFileBase64Encoded(certificate.getPrivateKey(), folderName + "/certificate" + certificate.id.toString() )
+                    certificateLoader.writeKeyToFileBase64Encoded(certificate.getPrivateKey(), folderName + "/certificate" + certificate.id.toString() +".cer" )
                 }
             })
             zipFolder(new File("./" + folderName), new File("./" + folderName + ".zip"))
 
-            String fullPath =  "./" + folderName + "/" + filename
-            LOG.info("Path to the file is " + fullPath)
-            path = Paths.get(folderName + "/" + filename)
-            File file = new File(folderName + "/" + filename)
+            //String fullPath =  "./" + folderName + "/" + filename
+            //LOG.info("Path to the file is " + fullPath)
+            path = Paths.get(folderName + "/" + "certificate0")
+
+            File file = new File(folderName + ".zip")
             byte[] fileContent = Files.readAllBytes(file.toPath())
 
             //Resource resource = new UrlResource(path.toUri())
             Resource resource = new ByteArrayResource(fileContent)
             FileUtils.deleteDirectory(path.getParent().toFile())
+            FileUtils.forceDelete(file)
             return resource
         }catch(Exception exception){
-            LOG.error("Failed exporting certificate:" + exception)
+            LOG.error("Failed exporting zip:" + exception)
         }
     }
 
-
-
-    static void pack(String sourceDirPath, String zipFilePath) throws IOException {
-        Path p = Files.createFile(Paths.get(zipFilePath));
-        try (ZipOutputStream zs = new ZipOutputStream(Files.newOutputStream(p))) {
-            Path pp = Paths.get(sourceDirPath);
-            Files.walk(pp)
-                    .filter(path -> !Files.isDirectory(path))
-                    .forEach(path -> {
-                        ZipEntry zipEntry = new ZipEntry(pp.relativize(path).toString());
-                        try {
-                            zs.putNextEntry(zipEntry);
-                            Files.copy(path, zs);
-                            zs.closeEntry();
-                        } catch (IOException e) {
-                            System.err.println(e);
-                        }
-                    });
-        }
-    }
-
-    public static void test(){
-        zipFolder(new File("/Users/shanewhitehead/exports"),
-                new File("FolderZiper.zip"));
-    }
-
-    public void zipFolder(File srcFolder, File destZipFile) throws Exception {
+    void zipFolder(File srcFolder, File destZipFile) throws Exception {
         try (FileOutputStream fileWriter = new FileOutputStream(destZipFile);
              ZipOutputStream zip = new ZipOutputStream(fileWriter)) {
 
