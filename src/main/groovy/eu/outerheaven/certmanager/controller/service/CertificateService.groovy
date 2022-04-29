@@ -203,6 +203,23 @@ class CertificateService {
     }
 
     void getExtendedKeyUsageList(X509Certificate certificate){
+        /*
+        The following extended key usage purposes are defined by RFC 3280:
+
+        serverAuth (1.3.6.1.5.5.7.3.1) -- TLS Web server authentication
+        clientAuth (1.3.6.1.5.5.7.3.2) -- TLS Web client authentication
+        codeSigning (1.3.6.1.5.5.7.3.3) -- Code signing
+        emailProtection (1.3.6.1.5.5.7.3.4) -- E-mail protection
+        timeStamping (1.3.6.1.5.5.7.3.8) -- Timestamping
+        ocspSigning (1.3.6.1.5.5.7.3.9) -- OCSPstamping
+
+        The following purposes have been included in a predecessor draft of RFC 3280 and therefore continue to be registrated by this implementation:
+
+        ipsecEndSystem (1.3.6.1.5.5.7.3.5) -- IP security end system
+        ipsecTunnel (1.3.6.1.5.5.7.3.6) -- IP security tunnel termination
+        ipsecUser (1.3.6.1.5.5.7.3.7) -- IP security user
+        */
+
 
     }
 
