@@ -350,7 +350,7 @@
                 Serial: {{ item.serial }}
                 <br>
                 <div v-if="item.alternativeNameDNS !== null && item.alternativeNameDNS !=='' ">
-                  <v-chip>">Alternative DNS: {{ item.alternativeNameDNS }}</v-chip>
+                  <v-chip>Alternative DNS: {{ item.alternativeNameDNS }}</v-chip>
                   <br>
                 </div>
                 <div v-if="item.alternativeNameIP !== null && item.alternativeNameIP !=='' ">
@@ -358,6 +358,11 @@
                   <br>
                 </div>
                 Keysize: {{ item.keysize }}
+                <br>
+
+
+
+                Key usage: {{ item.keyUsage }}
                 <br>
                 Signature: {{ item.signature }}
                 <br>

@@ -12,6 +12,7 @@ import eu.outerheaven.certmanager.controller.repository.InstanceRepository
 import eu.outerheaven.certmanager.controller.util.CertificateLoader
 import eu.outerheaven.certmanager.controller.util.PreparedRequest
 import org.apache.tomcat.util.http.fileupload.FileUtils
+import org.bouncycastle.asn1.x509.KeyPurposeId
 import org.bouncycastle.jce.interfaces.ECPublicKey
 import org.bouncycastle.jce.provider.JCEECPublicKey
 import org.slf4j.Logger
@@ -202,7 +203,18 @@ class CertificateService {
         return len;
     }
 
-    void getExtendedKeyUsageList(X509Certificate certificate){
+    List<String> getExtendedKeyUsageGUI(X509Certificate certificate){
+        List<String> extendedKeyUsageText = new ArrayList<>()
+        List<String> exKeyUsage = certificate.getExtendedKeyUsage()
+        if(exKeyUsage.contains("1.3.6.1.5.5.7.3.1")) extendedKeyUsageText.add("serverAuth")
+        if(exKeyUsage.contains("1.3.6.1.5.5.7.3.2")) extendedKeyUsageText.add("clientAuth")
+        if(exKeyUsage.contains("1.3.6.1.5.5.7.3.3")) extendedKeyUsageText.add("codeSigning")
+        if(exKeyUsage.contains("1.3.6.1.5.5.7.3.4")) extendedKeyUsageText.add("emailProtection")
+        if(exKeyUsage.contains("1.3.6.1.5.5.7.3.8")) extendedKeyUsageText.add("timeStamping")
+        if(exKeyUsage.contains("1.3.6.1.5.5.7.3.9")) extendedKeyUsageText.add("ocspSigning")
+        if(exKeyUsage.contains("1.3.6.1.5.5.7.3.5")) extendedKeyUsageText.add("ipsecEndSystem")
+        if(exKeyUsage.contains("1.3.6.1.5.5.7.3.6")) extendedKeyUsageText.add("ipsecTunnel")
+        if(exKeyUsage.contains("1.3.6.1.5.5.7.3.7")) extendedKeyUsageText.add("ipsecUser")
         /*
         The following extended key usage purposes are defined by RFC 3280:
 
@@ -220,7 +232,23 @@ class CertificateService {
         ipsecUser (1.3.6.1.5.5.7.3.7) -- IP security user
         */
 
+        return extendedKeyUsageText
+    }
 
+
+    List<KeyPurposeId> getExtendedKeyUsageKP(X509Certificate certificate){
+        List<KeyPurposeId> keyPurposeIds = new ArrayList<>()
+        List<String> exKeyUsage = certificate.getExtendedKeyUsage()
+        if(exKeyUsage.contains("1.3.6.1.5.5.7.3.1")) keyPurposeIds.add(KeyPurposeId.id_kp_serverAuth)
+        if(exKeyUsage.contains("1.3.6.1.5.5.7.3.2")) keyPurposeIds.add(KeyPurposeId.id_kp_clientAuth)
+        if(exKeyUsage.contains("1.3.6.1.5.5.7.3.3")) keyPurposeIds.add(KeyPurposeId.id_kp_codeSigning)
+        if(exKeyUsage.contains("1.3.6.1.5.5.7.3.4")) keyPurposeIds.add(KeyPurposeId.id_kp_emailProtection)
+        if(exKeyUsage.contains("1.3.6.1.5.5.7.3.8")) keyPurposeIds.add(KeyPurposeId.id_kp_timeStamping)
+        if(exKeyUsage.contains("1.3.6.1.5.5.7.3.9")) keyPurposeIds.add(KeyPurposeId.id_kp_OCSPSigning)
+        if(exKeyUsage.contains("1.3.6.1.5.5.7.3.5")) keyPurposeIds.add(KeyPurposeId.id_kp_ipsecEndSystem)
+        if(exKeyUsage.contains("1.3.6.1.5.5.7.3.6")) keyPurposeIds.add(KeyPurposeId.id_kp_ipsecTunnel)
+        if(exKeyUsage.contains("1.3.6.1.5.5.7.3.7")) keyPurposeIds.add(KeyPurposeId.id_kp_ipsecUser)
+        return keyPurposeIds
     }
 
 
