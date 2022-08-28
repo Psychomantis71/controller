@@ -75,7 +75,7 @@ class CertificateService {
                 signatureHashAlgorithm: certificate.x509Certificate.getSigAlgName().toString(),
                 keysize: getKeyLength(certificate.x509Certificate.publicKey),
                 keyUsage: getKeyUsageList(certificate.x509Certificate),
-                enhancedKeyUsage: certificate.x509Certificate.getExtendedKeyUsage(),
+                enhancedKeyUsage: getExtendedKeyUsageGUI(certificate.x509Certificate),
                 alternativeNameDNS: getAlternateNames(certificate.x509Certificate,2),
                 alternativeNameIP: getAlternateNames(certificate.x509Certificate,7),
                 basicConstraints: certificate.x509Certificate.basicConstraints,
@@ -206,6 +206,7 @@ class CertificateService {
     List<String> getExtendedKeyUsageGUI(X509Certificate certificate){
         List<String> extendedKeyUsageText = new ArrayList<>()
         List<String> exKeyUsage = certificate.getExtendedKeyUsage()
+        if(exKeyUsage == null) return extendedKeyUsageText
         if(exKeyUsage.contains("1.3.6.1.5.5.7.3.1")) extendedKeyUsageText.add("serverAuth")
         if(exKeyUsage.contains("1.3.6.1.5.5.7.3.2")) extendedKeyUsageText.add("clientAuth")
         if(exKeyUsage.contains("1.3.6.1.5.5.7.3.3")) extendedKeyUsageText.add("codeSigning")
@@ -239,6 +240,7 @@ class CertificateService {
     List<KeyPurposeId> getExtendedKeyUsageKP(X509Certificate certificate){
         List<KeyPurposeId> keyPurposeIds = new ArrayList<>()
         List<String> exKeyUsage = certificate.getExtendedKeyUsage()
+        if(exKeyUsage == null) return keyPurposeIds
         if(exKeyUsage.contains("1.3.6.1.5.5.7.3.1")) keyPurposeIds.add(KeyPurposeId.id_kp_serverAuth)
         if(exKeyUsage.contains("1.3.6.1.5.5.7.3.2")) keyPurposeIds.add(KeyPurposeId.id_kp_clientAuth)
         if(exKeyUsage.contains("1.3.6.1.5.5.7.3.3")) keyPurposeIds.add(KeyPurposeId.id_kp_codeSigning)

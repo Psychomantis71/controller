@@ -359,10 +359,9 @@
                 </div>
                 Keysize: {{ item.keysize }}
                 <br>
-
-
-
                 Key usage: {{ item.keyUsage }}
+                <br>
+                Enhanced key usage: {{ item.enhancedKeyUsage }}
                 <br>
                 Signature: {{ item.signature }}
                 <br>

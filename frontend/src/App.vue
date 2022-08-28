@@ -192,6 +192,15 @@ export default {
   beforeDestroy() {
     EventBus.$off('authenticated');
   },
+  mounted() {
+    //Inserted to prevent user that logged out pressing back button and accessing page again
+    const isAuthenticated = localStorage.getItem('auth');
+    window.onpopstate = event => {
+      if (!isAuthenticated) {
+        this.$router.replace("signIn");
+      }
+    };
+  },
   methods: {
     userSignOut() {
       this.$store.dispatch('userSignOut');

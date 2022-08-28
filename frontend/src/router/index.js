@@ -17,6 +17,7 @@ Vue.use(Router);
 
 const router = new Router({
   mode: 'history',
+  base:'myproject',
   routes: [
     {
       path: '/',
@@ -93,9 +94,9 @@ router.beforeEach((to, from, next) => {
   const isLoginPage = to.matched.some((record) => record.meta.loginPage);
   const isAuthenticated = localStorage.getItem('auth');
   if (requiresAuth && !isAuthenticated) {
-    next('/signIn');
+    next('signIn');
   } else if (isLoginPage && isAuthenticated) {
-    router.push('/home');
+    router.push('home');
   }
   next();
 });

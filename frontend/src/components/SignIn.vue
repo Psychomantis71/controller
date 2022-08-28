@@ -83,6 +83,7 @@
 </template>
 
 <script>
+import mySettingsObject from 'my-app-settings'
 export default {
   data() {
     return {
@@ -115,6 +116,9 @@ export default {
   },
   methods: {
     userSignIn() {
+      let myValue = mySettingsObject.MY_VARIABLE
+      console.log('Custom value is: ')
+      console.log(myValue)
       this.$store.dispatch('userSignIn', { username: this.username, password: this.password, otpCode: this.otpCode });
     },
   },

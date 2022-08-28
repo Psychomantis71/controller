@@ -3,6 +3,8 @@ plugins {
     id 'io.spring.dependency-management' version '1.0.11.RELEASE'
     id 'war'
     id 'groovy'
+    id "com.moowork.node" version "1.3.1"
+    id 'java'
 }
 
 group = 'eu.outerheaven.certmanager'
@@ -18,6 +20,7 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-data-rest'
     implementation 'org.springframework.boot:spring-boot-starter-security'
     implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-test'
     implementation 'org.springframework.boot:spring-boot-configuration-processor'
     implementation 'org.codehaus.groovy:groovy:3.0.8'
     implementation 'org.apache.commons:commons-lang3'
@@ -34,7 +37,54 @@ dependencies {
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.security:spring-security-test'
 }
+node {
+    version = '14.15.4'
+    workDir = file("${project.projectDir}/frontend/node")
+}
+
+processResources{
+    dependsOn 'vueBuild'
+    dependsOn 'copyFrontendToBuild'
+}
+
+task copyFrontendToBuild(type: Copy) {
+    from "$projectDir/frontend/dist/"
+    into "$buildDir/resources/main/static"
+}
+
+task vueBuild(type: NpmTask) {
+    dependsOn 'vueInstall'
+    execOverrides {
+        it.workingDir = 'frontend'
+    }
+    args = ['run', 'build','--prod']
+}
+
+task vueInstall (type: NpmTask) {
+    execOverrides {
+        it.ignoreExitValue = true
+        it.workingDir = 'frontend'
+    }
+    args = ['install']
+}
+
 
 test {
     useJUnitPlatform()
+}
+
+jar {
+    manifest {
+        attributes(
+                'Main-Class': 'eu.outerheaven.certmanager.controller.ControllerApplication'
+        )
+    }
+
+}
+war {
+    manifest {
+        attributes(
+                'Main-Class': 'eu.outerheaven.certmanager.controller.ControllerApplication'
+        )
+    }
 }

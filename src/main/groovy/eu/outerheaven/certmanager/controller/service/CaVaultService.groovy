@@ -98,6 +98,9 @@ class CaVaultService {
     @Autowired
     private Environment environment
 
+    @Autowired
+    private final CertificateService certificateService
+
     private static final String BC_PROVIDER = "BC"
     private static final String KEY_ALGORITHM = "RSA"
     private static final String SIGNATURE_ALGORITHM = "SHA256withRSA"
@@ -448,7 +451,11 @@ class CaVaultService {
         //Extened key usage example
         //List<KeyPurposeId> keyPurposeIds = new ArrayList<>()
         //issuedCertBuilder.addExtension(Extension.extendedKeyUsage, false, new ExtendedKeyUsage(new KeyPurposeId[]{KeyPurposeId.id_kp_clientAuth, KeyPurposeId.id_kp_serverAuth}))
-        //issuedCertBuilder.addExtension(Extension.extendedKeyUsage, false, new ExtendedKeyUsage(new KeyPurposeId[]{keyPurposeIds}))
+
+        List<KeyPurposeId> exKeyUsage = certificateService.getExtendedKeyUsageKP(certificateToRenew.x509Certificate)
+        if(exKeyUsage.size()>0){
+            issuedCertBuilder.addExtension(Extension.extendedKeyUsage, false, new ExtendedKeyUsage(new KeyPurposeId[]{exKeyUsage}))
+        }
 
         // Add intended key usage extension if needed
         issuedCertBuilder.addExtension(Extension.keyUsage, false, new KeyUsage(KeyUsage.keyEncipherment))
