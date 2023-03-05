@@ -163,6 +163,8 @@
 </template>
 
 <script>
+import mySettingsObject from 'my-app-settings';
+let backendApiUrl = mySettingsObject.BACKEND_API_URL;
 export default {
   data() {
     return {
@@ -208,7 +210,7 @@ export default {
   methods: {
     getUserData() {
       this.$axios
-        .get('http://localhost:8091/api/user/all-gui')
+        .get(`${backendApiUrl}/api/user/all-gui`)
         .then((response) => {
           console.log('Get response: ', response.data);
           this.users = response.data;
@@ -220,7 +222,7 @@ export default {
     },
     deleteUser(){
       this.$axios
-        .post('http://localhost:8091/api/user/delete', this.selected)
+        .post(`${backendApiUrl}/api/user/delete`, this.selected)
         .then((response) => {
           console.log('Post response: ', response.data);
         })
@@ -231,7 +233,7 @@ export default {
     },
     addUser(){
       this.$axios
-        .post('http://localhost:8091/api/user/add', this.userToAdd)
+        .post(`${backendApiUrl}/api/user/add`, this.userToAdd)
         .then((response) => {
           console.log('Post response: ', response.data);
         })

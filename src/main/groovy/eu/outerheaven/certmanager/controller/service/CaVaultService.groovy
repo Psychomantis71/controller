@@ -272,7 +272,7 @@ class CaVaultService {
         LOG.info("CA signed cert has been created")
 
     }
-
+    /*
     //Deprecated
     void renewOld(X509Certificate certificate, Boolean cavault, Long signerCertId, Long certificateId){
         LOG.info("Starting renewal process for certificate ID {}, CaVault: {}",certificateId,cavault.toString())
@@ -369,20 +369,21 @@ class CaVaultService {
         //writeCertToFileBase64Encoded(issuedCert, "re-issued-cert.cer")
         //exportKeyPairToKeystoreFile(issuedCertKeyPair, issuedCert, "re-issued-cert", "issued-cert.pfx", "PKCS12", "password")
         if(cavault){
-            CaCertificate tosave = repository.findById(certificateId).get()
+            CaCertificate catosave = repository.findById(certificateId).get()
             eu.outerheaven.certmanager.controller.entity.Certificate cert
-            tosave.setPrivateKey(issuedCertKeyPair.getPrivate())
-            tosave.setX509Certificate(issuedCert)
+            catosave.setPrivateKey(issuedCertKeyPair.getPrivate())
+            catosave.setX509Certificate(issuedCert)
             repository.save(tosave)
         }else{
             LOG.info("Well fuck not implemented yet")
         }
         LOG.info("Finished renewal process!")
     }
-
+        */
     //Refactored
     void renew(eu.outerheaven.certmanager.controller.entity.Certificate certificateToRenew){
         LOG.info("Starting renewal process for certificate with ID {}",certificateToRenew.id)
+        LOG.info("Starting renewal process for certificate with Signer certificate ID {}",certificateToRenew.getSignerCertificateId())
         CaCertificate parentCert = repository.findById(certificateToRenew.getSignerCertificateId()).get()
         X509Certificate certificate = certificateToRenew.getX509Certificate()
         Date firstDate = certificate.getNotBefore()

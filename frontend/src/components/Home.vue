@@ -15,6 +15,8 @@
 </template>
 
 <script>
+import mySettingsObject from 'my-app-settings';
+let backendApiUrl = mySettingsObject.BACKEND_API_URL;
 export default {
   name: 'Home',
   data() {
@@ -29,7 +31,7 @@ export default {
   methods: {
     getHomePageInformation() {
       this.$axios
-        .get('http://localhost:8091/test')
+        .get(`${backendApiUrl}/test`)
         .then((response) => {
           console.log('Get response: ', response.data);
           this.data = response.data;

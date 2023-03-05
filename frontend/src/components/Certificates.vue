@@ -378,6 +378,8 @@
 </template>
 
 <script>
+import mySettingsObject from 'my-app-settings';
+let backendApiUrl = mySettingsObject.BACKEND_API_URL;
 export default {
   data() {
     return {
@@ -463,7 +465,7 @@ export default {
   methods: {
     getCertificateData() {
       this.$axios
-        .get('http://localhost:8091/api/certificate/all-gui')
+        .get(`${backendApiUrl}/api/certificate/all-gui`)
         .then((response) => {
           console.log(response.data)
           this.certificatelist = response.data;
@@ -475,7 +477,7 @@ export default {
     },
     removeCertificates() {
       this.$axios
-        .post('http://localhost:8091/api/certificate/remove',this.selected)
+        .post(`${backendApiUrl}/api/certificate/remove`,this.selected)
         .then((response) => {
           console.log(response)
         })
@@ -487,7 +489,7 @@ export default {
     },
     exportCertificatePEM() {
       this.$axios
-        .get(`http://localhost:8091/api/certificate/${this.selected[0].id}/export-pem`)
+        .get(`${backendApiUrl}/api/certificate/${this.selected[0].id}/export-pem`)
         .then((response) => {
           let filetodownload = response.headers['content-disposition'].split('filename=')[1].split(';')[0];
           filetodownload = filetodownload.substring(1, filetodownload.length-1)
@@ -509,7 +511,7 @@ export default {
     },
     exportCertificateZip() {
       this.$axios
-        .post('http://localhost:8091/api/certificate/retrieve-and-download', this.retrieveItem, {
+        .post(`${backendApiUrl}/api/certificate/retrieve-and-download`, this.retrieveItem, {
           responseType: 'blob'
         })
         .then((response) => {
@@ -543,7 +545,7 @@ export default {
     },
     getKeystoreData() {
       this.$axios
-        .get('http://localhost:8091/api/keystore/all-gui')
+        .get(`${backendApiUrl}/api/keystore/all-gui`)
         .then((response) => {
           console.log('Get response: ', response.data);
           this.keystores = response.data;
@@ -574,7 +576,7 @@ export default {
           this.importItem.filename=this.fileToUpload.name
           console.log(this.importItem)
           this.$axios
-            .post('http://localhost:8091/api/keystore-certificate/import', this.importItem)
+            .post(`${backendApiUrl}/api/keystore-certificate/import`, this.importItem)
             .then((response) => {
               console.log('Post response: ', response.data);
             })
@@ -587,7 +589,7 @@ export default {
     },
     getInstanceData() {
       this.$axios
-        .get('http://localhost:8091/api/instance/all')
+        .get(`${backendApiUrl}/api/instance/all`)
         .then((response) => {
           console.log('Get response: ', response.data);
           this.instances = response.data;
@@ -599,7 +601,7 @@ export default {
     },
     retrieveFromPortData() {
       this.$axios
-        .post('http://localhost:8091/api/certificate/retrieve-from-port',this.retrieveItem)
+        .post(`${backendApiUrl}/api/certificate/retrieve-from-port`,this.retrieveItem)
         .then((response) => {
           this.retrieveFromItems = response.data;
           for (let index = 0; index < this.retrieveFromItems.length; ++index) {

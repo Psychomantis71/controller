@@ -1,5 +1,6 @@
 window.myAppSettings = {
-    MY_VARIABLE: 'some_value',
-    BACKEND_API_URL:'http://localhost:8091',
+    MY_VARIABLE: 'Global value',
+    ROOT_CONTEXT: 'oscm-frontend',
+    BACKEND_API_URL:'http://192.168.1.206:8091',
 }
 

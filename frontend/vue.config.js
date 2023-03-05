@@ -7,7 +7,7 @@ module.exports = {
   },
 
   publicPath: process.env.NODE_ENV === 'production'
-    ? '/myproject/'
+    ? '/oscm-frontend/'
     : '/',
 
   lintOnSave: false,

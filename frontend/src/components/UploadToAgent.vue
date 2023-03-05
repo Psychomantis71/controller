@@ -216,6 +216,8 @@
 </template>
 
 <script>
+import mySettingsObject from 'my-app-settings';
+let backendApiUrl = mySettingsObject.BACKEND_API_URL;
 export default {
   data() {
     return {
@@ -278,7 +280,7 @@ export default {
   methods: {
     getPayloadLocationData() {
       this.$axios
-        .get('http://localhost:8091/api/files/all-gui')
+        .get(`${backendApiUrl}/api/files/all-gui`)
         .then((response) => {
           console.log('Get response: ', response.data);
           this.payloadLocations = response.data;
@@ -290,7 +292,7 @@ export default {
     },
     addPayloadLocationData() {
       this.$axios
-        .post('http://localhost:8091/api/files/add-location', this.newPayloadLocation)
+        .post(`${backendApiUrl}/api/files/add-location`, this.newPayloadLocation)
         .then((response) => {
           console.log('Post response: ', response.data);
           this.getPayloadLocationData();
@@ -302,7 +304,7 @@ export default {
     },
     getInstanceData() {
       this.$axios
-        .get('http://localhost:8091/api/instance/all')
+        .get(`${backendApiUrl}/api/instance/all`)
         .then((response) => {
           console.log('Get response: ', response.data);
           this.agentInstances = response.data;
@@ -372,7 +374,7 @@ export default {
       this.getBase64(this.fileToUpload).then(
         data => {
           this.$axios
-            .post('http://localhost:8091/api/files/upload-file', data, this.selected)
+            .post(`${backendApiUrl}/api/files/upload-file`, data, this.selected)
             .then((response) => {
               console.log('Post response: ', response.data);
             })
@@ -384,7 +386,7 @@ export default {
       );
 
       this.$axios
-        .post('http://localhost:8091/api/files/upload-file', this.fileToUpload, this.selected)
+        .post(`${backendApiUrl}/api/files/upload-file`, this.fileToUpload, this.selected)
         .then((response) => {
           console.log('Post response: ', response.data);
         })
@@ -401,7 +403,7 @@ export default {
           this.uploadToAgentData.payloadLocationFormGUIS=this.selected
           console.log(this.uploadToAgentData)
           this.$axios
-            .post('http://localhost:8091/api/files/upload-file', this.uploadToAgentData)
+            .post(`${backendApiUrl}/api/files/upload-file`, this.uploadToAgentData)
             .then((response) => {
               console.log('Post response: ', response.data);
             })

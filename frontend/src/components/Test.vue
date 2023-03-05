@@ -709,6 +709,8 @@
 </style>
 
 <script>
+import mySettingsObject from 'my-app-settings';
+let backendApiUrl = mySettingsObject.BACKEND_API_URL;
 export default {
   data() {
     return {
@@ -779,7 +781,7 @@ export default {
   methods: {
     getCertificateData() {
       this.$axios
-        .get('http://localhost:8091/api/cavault/all-gui')
+        .get(`${backendApiUrl}/api/cavault/all-gui`)
         .then((response) => {
           console.log('Get response: ', response.data);
           this.certificatelist = response.data;
@@ -800,7 +802,7 @@ export default {
     },
     postNewCa() {
       this.$axios
-        .post('http://localhost:8091/api/cavault/add-root', this.newCa)
+        .post(`${backendApiUrl}/api/cavault/add-root`, this.newCa)
         .then((response) => {
           console.log('Post response: ', response.data);
           this.getCertificateData();
@@ -818,7 +820,7 @@ export default {
       this.newSignedCert.signingCertId = this.selected[0].id
       this.e1 = 1
       this.$axios
-        .post('http://localhost:8091/api/cavault/add-signed', this.newSignedCert)
+        .post(`${backendApiUrl}/api/cavault/add-signed`, this.newSignedCert)
         .then((response) => {
           console.log('Post response: ', response.data);
           this.getCertificateData();

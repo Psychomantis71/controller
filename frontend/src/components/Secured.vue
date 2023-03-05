@@ -197,6 +197,8 @@
 </template>
 
 <script>
+import mySettingsObject from 'my-app-settings';
+let backendApiUrl = mySettingsObject.BACKEND_API_URL;
 export default {
   data() {
     return {
@@ -233,7 +235,7 @@ export default {
   methods: {
     getUserData() {
       this.$axios
-        .get('http://localhost:8091/api/user/user-data')
+        .get(`${backendApiUrl}/api/user/user-data`)
         .then((response) => {
           this.userData = response.data;
         })
@@ -244,7 +246,7 @@ export default {
     },
     changePassword() {
       this.$axios
-        .post(`http://localhost:8091/api/user/${this.userData.id}/change-password`, this.userData)
+        .post(`${backendApiUrl}/api/user/${this.userData.id}/change-password`, this.userData)
         .then((response) => {
           console.log(response)
           this.getUserData();
@@ -256,7 +258,7 @@ export default {
     },
     changeEmail() {
       this.$axios
-        .post(`http://localhost:8091/api/user/${this.userData.id}/change-email`, this.userData)
+        .post(`${backendApiUrl}/api/user/${this.userData.id}/change-email`, this.userData)
         .then((response) => {
           console.log(response)
           this.getUserData();
@@ -268,7 +270,7 @@ export default {
     },
     enable2fa() {
       this.$axios
-        .get(`http://localhost:8091/api/user/${this.userData.id}/enable2fa`)
+        .get(`${backendApiUrl}/api/user/${this.userData.id}/enable2fa`)
         .then((response) => {
           console.log(response.data)
           this.qrCode = response.data;
@@ -280,7 +282,7 @@ export default {
     },
     disable2fa() {
       this.$axios
-        .get(`http://localhost:8091/api/user/${this.userData.id}/disable2fa`)
+        .get(`${backendApiUrl}/api/user/${this.userData.id}/disable2fa`)
         .then((response) => {
           console.log(response.data)
         })
@@ -291,7 +293,7 @@ export default {
     },
     validateOtp() {
       this.$axios
-        .post(`http://localhost:8091/api/user/${this.userData.id}/validateOtp/${this.otpCode}`)
+        .post(`${backendApiUrl}/api/user/${this.userData.id}/validateOtp/${this.otpCode}`)
         .then((response) => {
           console.log(response.data)
         })

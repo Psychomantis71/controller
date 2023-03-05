@@ -164,6 +164,8 @@
 </template>
 
 <script>
+import mySettingsObject from 'my-app-settings';
+let backendApiUrl = mySettingsObject.BACKEND_API_URL;
 export default {
   data() {
     return {
@@ -214,7 +216,7 @@ export default {
   methods: {
     getKeystoreData() {
       this.$axios
-        .get('http://localhost:8091/api/keystore/all-gui')
+        .get(`${backendApiUrl}/api/keystore/all-gui`)
         .then((response) => {
           console.log('Get response: ', response.data);
           this.keystores = response.data;
@@ -226,7 +228,7 @@ export default {
     },
     addKeystore() {
       this.$axios
-        .post('http://localhost:8091/api/keystore/add', this.keystoresToAdd)
+        .post(`${backendApiUrl}/api/keystore/add`, this.keystoresToAdd)
         .then((response) => {
           console.log('Post response: ', response.data);
           this.getKeystoreData();
@@ -238,7 +240,7 @@ export default {
     },
     deleteKeystores() {
       this.$axios
-        .post('http://localhost:8091/api/keystore/remove', this.selected)
+        .post(`${backendApiUrl}/api/keystore/remove`, this.selected)
         .then((response) => {
           console.log('Post response: ', response.data);
         })
@@ -249,7 +251,7 @@ export default {
     },
     getInstanceData() {
       this.$axios
-        .get('http://localhost:8091/api/instance/all')
+        .get(`${backendApiUrl}/api/instance/all`)
         .then((response) => {
           console.log('Get response: ', response.data);
           this.agentInstances = response.data;

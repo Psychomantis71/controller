@@ -17,7 +17,7 @@ Vue.use(Router);
 
 const router = new Router({
   mode: 'history',
-  base:'myproject',
+  base:'oscm-frontend',
   routes: [
     {
       path: '/',

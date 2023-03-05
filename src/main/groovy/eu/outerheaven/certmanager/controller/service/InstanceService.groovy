@@ -98,6 +98,7 @@ class InstanceService {
             userRepository.save(user)
             Long userId = userRepository.findByUserName(tmpusername).getId()
             user.setUserName("adopted_agent_" + userId)
+            LOG.info("Saving new agent user to repository after username change")
             userRepository.save(user)
             instance.setAdopted(true)
             PreparedRequest preparedRequest = new PreparedRequest()
@@ -110,16 +111,18 @@ class InstanceService {
             try{
                 response = restTemplate.postForEntity(instance.getAccessUrl() + api_url + "/update", request, String.class)
                 instance.instanceAccessData.setPassword(response.getBody().toString())
-                instance.setUser(user)
+                instance.setUser(userRepository.findById(userId).get())
                 //MAKNI MEEEEEEEEEEEEEEEEEEEEEEEEEEEEE
                 User moj_korisnik = userRepository.findByUserName("admin")
                 List<User> korsnici = new ArrayList<>()
                 korsnici.add(moj_korisnik)
                 instance.setAssignedUsers(korsnici)
+                LOG.info("Saving instance data with new user to repository after agent response is positive")
                 repository.save(instance)
                 LOG.info("Entity with IP {}, hostname {}, and port {} has been adopted and recognized by the target agent!",instance.getIp(),instance.getHostname(),instance.getPort())
             } catch(Exception e){
                 LOG.error("Agent adoption failed with error: " + e )
+                LOG.info("Deleting temp user for agent")
                 userRepository.deleteById(userId)
             }
 

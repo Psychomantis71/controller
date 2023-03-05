@@ -137,7 +137,9 @@
 </template>
 
 <script>
-export default {
+import mySettingsObject from 'my-app-settings';
+let backendApiUrl = mySettingsObject.BACKEND_API_URL;
+  export default {
   data() {
     return {
       selected: [],
@@ -175,7 +177,7 @@ export default {
   methods: {
     getInstanceData() {
       this.$axios
-        .get('http://localhost:8091/api/instance/all')
+        .get(`${backendApiUrl}/api/instance/all`)
         .then((response) => {
           console.log('Get response: ', response.data);
           this.instances = response.data;
@@ -188,7 +190,7 @@ export default {
     removeInstances() {
       console.log(this.selected)
       this.$axios
-        .post('http://localhost:8091/api/instance/remove', this.selected)
+        .post(`${backendApiUrl}/api/instance/remove`, this.selected)
         .then((response) => {
           console.log('Get response: ', response.data);
         })
@@ -200,7 +202,7 @@ export default {
     },
     getAllUserData() {
       this.$axios
-        .get('http://localhost:8091/api/user/all-gui')
+        .get(`${backendApiUrl}/api/user/all-gui`)
         .then((response) => {
           console.log('Get response: ', response.data);
           this.allUsers = response.data;
@@ -212,7 +214,7 @@ export default {
     },
     getAssignedUserData() {
       this.$axios
-        .get(`http://localhost:8091/api/instance/${this.selected[0].id}/get-assigned`)
+        .get(`${backendApiUrl}/api/instance/${this.selected[0].id}/get-assigned`)
         .then((response) => {
           console.log('Get response: ', response.data);
           this.assignedUsers = response.data;
@@ -224,7 +226,7 @@ export default {
     },
     setAssignedUserData() {
       this.$axios
-        .post(`http://localhost:8091/api/instance/${this.selected[0].id}/set-assigned`, this.assignedUsers)
+        .post(`${backendApiUrl}/api/instance/${this.selected[0].id}/set-assigned`, this.assignedUsers)
         .then((response) => {
           console.log('Get response: ', response.data);
         })
@@ -244,7 +246,7 @@ export default {
     },
     adoptSelected() {
       this.$axios
-        .put('http://localhost:8091/api/instance/adopt', this.selected)
+        .put(`${backendApiUrl}/api/instance/adopt`, this.selected)
         .then((response) => {
           console.log('Get response: ', response.data);
           this.getInstanceData();

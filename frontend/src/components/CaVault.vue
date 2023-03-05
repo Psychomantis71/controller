@@ -956,6 +956,8 @@
 </style>
 
 <script>
+import mySettingsObject from 'my-app-settings';
+let backendApiUrl = mySettingsObject.BACKEND_API_URL;
 export default {
   data() {
     return {
@@ -1047,7 +1049,7 @@ export default {
   methods: {
     getCertificateData() {
       this.$axios
-        .get('http://localhost:8091/api/cavault/all-gui')
+        .get(`${backendApiUrl}/api/cavault/all-gui`)
         .then((response) => {
           console.log('Get response: ', response.data);
           this.certificatelist = response.data;
@@ -1081,7 +1083,7 @@ export default {
     },
     postNewCa() {
       this.$axios
-        .post('http://localhost:8091/api/cavault/add-root', this.newCa)
+        .post(`${backendApiUrl}/api/cavault/add-root`, this.newCa)
         .then((response) => {
           console.log('Post response: ', response.data);
           this.getCertificateData();
@@ -1096,7 +1098,7 @@ export default {
     },
     postAssignerSigner() {
       this.$axios
-        .post(`http://localhost:8091/api/cavault/${this.selectedSigners[0].id}/cacert-assign-signer`, this.selected)
+        .post(`${backendApiUrl}/api/cavault/${this.selectedSigners[0].id}/cacert-assign-signer`, this.selected)
         .then((response) => {
           console.log('Post response: ', response.data);
         })
@@ -1113,7 +1115,7 @@ export default {
       this.newSignedCert.signingCertId = this.selected[0].id
       this.e1 = 1
       this.$axios
-        .post('http://localhost:8091/api/cavault/add-signed', this.newSignedCert)
+        .post(`${backendApiUrl}/api/cavault/add-signed`, this.newSignedCert)
         .then((response) => {
           console.log('Post response: ', response.data);
           this.getCertificateData();
@@ -1128,7 +1130,7 @@ export default {
     },
     exportCertificatePEM() {
       this.$axios
-        .get(`http://localhost:8091/api/cavault/${this.selected[0].id}/export-pem`)
+        .get(`${backendApiUrl}/api/cavault/${this.selected[0].id}/export-pem`)
         .then((response) => {
           let filetodownload = response.headers['content-disposition'].split('filename=')[1].split(';')[0];
           filetodownload = filetodownload.substring(1, filetodownload.length-1)
@@ -1191,7 +1193,7 @@ export default {
           this.importItem.filename=this.fileToUpload.name
           console.log(this.importItem)
           this.$axios
-            .post('http://localhost:8091/api/cavault/import', this.importItem)
+            .post(`${backendApiUrl}/api/cavault/import`, this.importItem)
             .then((response) => {
               console.log('Post response: ', response.data);
             })
@@ -1209,7 +1211,7 @@ export default {
           this.importItem.filename=this.fileToUpload.name
           console.log(this.importItem)
           this.$axios
-            .post(`http://localhost:8091/api/cavault/${this.selected[0].id}/replace`, this.importItem)
+            .post(`${backendApiUrl}/api/cavault/${this.selected[0].id}/replace`, this.importItem)
             .then((response) => {
               console.log('Post response: ', response.data);
             })
@@ -1222,7 +1224,7 @@ export default {
     },
     removeCert() {
       this.$axios
-        .post('http://localhost:8091/api/cavault/remove', this.selected)
+        .post(`${backendApiUrl}/api/cavault/remove`, this.selected)
         .then((response) => {
           console.log('Post response: ', response.data);
         })

@@ -87,7 +87,7 @@ import mySettingsObject from 'my-app-settings'
 export default {
   data() {
     return {
-      otpcheckbox:false,
+      otpcheckbox: false,
       otpCode:'',
       username: '',
       password: '',
