@@ -398,6 +398,7 @@ class CertificateService {
         )
         return certificate
     }
+
     List<Certificate> toClass(List<CertificateDto> certificateDtos){
         List<Certificate> certificates = new ArrayList<>()
         certificateDtos.forEach(r->{

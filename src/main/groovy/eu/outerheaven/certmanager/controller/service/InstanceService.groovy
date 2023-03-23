@@ -43,7 +43,6 @@ class InstanceService {
     private final KeystoreRepository keystoreRepository
 
     boolean adoptRequest(InstanceForm form, String ip){
-        User user = userRepository.findByUserName("agent_user")
         if(form.getIp() != ip){
             LOG.warn("The self reported IP from the agent does not match up with the IP the request arrived from, will use the request IP")
             form.setIp(ip)
@@ -55,7 +54,6 @@ class InstanceService {
                 port: form.port,
                 adopted: false
         )
-        instance.setUser(user)
         InstanceAccessData tmp = new InstanceAccessData(
                 instance: instance,
                 password: defaultPassword.toString()
@@ -63,6 +61,43 @@ class InstanceService {
 
         instance.setInstanceAccessData(tmp)
         if(repository.findByPortAndHostname(instance.getPort(), instance.getHostname()) == null && repository.findByPortAndIp(instance.getPort(), instance.getIp()) == null){
+
+            CertificateLoader  certificateLoader = new CertificateLoader()
+            //Generate tmp username so entity can be saved and fetch id
+            String tmpusername = certificateLoader.generateRandomName()
+            while (userRepository.findByUserName(tmpusername) != null){
+                tmpusername = certificateLoader.generateRandomName()
+            }
+            //generate password for new user
+            BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder()
+            String password = certificateLoader.generateRandomAlphanumeric()
+            Long newAgentId = createUnadoptedAgent(tmpusername, passwordEncoder.encode(password))
+            User newAgent = userRepository.findById(newAgentId).get()
+            instance.setUser(newAgent)
+            repository.save(instance)
+
+            InstanceForm instanceForm = toForm(instance)
+            instanceForm.setNewUsername(newAgent.userName)
+            instanceForm.setNewPassword(password)
+            PreparedRequest preparedRequest = new PreparedRequest()
+            RestTemplate restTemplate = new RestTemplate();
+            HttpEntity<InstanceForm> request = new HttpEntity<>(instanceForm, preparedRequest.getHeader(instance));
+            ResponseEntity<String> response
+            try{
+                response = restTemplate.postForEntity(instance.getAccessUrl() + api_url + "/update", request, String.class)
+                instance.instanceAccessData.setPassword(response.getBody().toString())
+                repository.save(instance)
+                LOG.info("Entity with IP {}, hostname {}, and port {} has sent an adoption request, assigned user {}!",instance.getIp(),instance.getHostname(),instance.getPort(), instance.getUser().getUserName().toString())
+            } catch(Exception e){
+                LOG.error("Adoption request encountered an error: " + e )
+                LOG.info("Deleting temp user for agent")
+                userRepository.deleteById(newAgentId)
+            }
+
+
+
+
+
             repository.save(instance)
             return true
         }else{
@@ -82,21 +117,10 @@ class InstanceService {
 
         for(int i=0;i<form.size();i++){
             Instance instance = repository.findById(form.get(i).getId()).get()
-            CertificateLoader  certificateLoader = new CertificateLoader()
-            //Generate tmp username so entity can be saved and fetch id
-            String tmpusername = certificateLoader.generateRandomName()
-            while (userRepository.findByUserName(tmpusername) != null){
-                tmpusername = certificateLoader.generateRandomName()
-            }
-            //generate password for new user, create user and apply correct username
-            BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder()
-            String password = certificateLoader.generateRandomAlphanumeric()
-            User user = new User()
-            user.setUserName(tmpusername)
-            user.setPassword(passwordEncoder.encode(password))
+            User user = instance.getUser()
             user.setUserRole(UserRole.AGENT_ADOPTED)
             userRepository.save(user)
-            Long userId = userRepository.findByUserName(tmpusername).getId()
+            Long userId = userRepository.findByUserName(user.getUserName()).getId()
             user.setUserName("adopted_agent_" + userId)
             LOG.info("Saving new agent user to repository after username change")
             userRepository.save(user)
@@ -105,7 +129,6 @@ class InstanceService {
             RestTemplate restTemplate = new RestTemplate();
             form.get(i).setAdopted(true)
             form.get(i).setNewUsername("adopted_agent_" + userId)
-            form.get(i).setNewPassword(password)
             HttpEntity<InstanceForm> request = new HttpEntity<>(form.get(i), preparedRequest.getHeader(instance));
             ResponseEntity<String> response
             try{
@@ -177,6 +200,20 @@ class InstanceService {
         })
 
 
+    }
+
+    String generatePassword
+
+    Long createUnadoptedAgent(String tmpusername, String encdedPassword){
+        User user = new User()
+        user.setUserName(tmpusername)
+        user.setPassword(encdedPassword)
+        user.setUserRole(UserRole.AGENT)
+        userRepository.save(user)
+        Long userId = userRepository.findByUserName(tmpusername).getId()
+        user.setUserName("unadopted_agent_" + userId)
+        userRepository.save(user)
+        return userId
     }
 
     UserForm toUserForm(User user){

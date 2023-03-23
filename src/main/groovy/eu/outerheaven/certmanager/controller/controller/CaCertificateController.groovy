@@ -41,7 +41,7 @@ class CaCertificateController {
 
     @PostMapping("/add-signed")
     ResponseEntity addSigned(@RequestBody NewSignedCertificateForm newSignedCertificateForm){
-        ResponseEntity.ok(service.createSignedCert(newSignedCertificateForm))
+        ResponseEntity.ok(service.createSignedCACert(newSignedCertificateForm))
     }
 
     @GetMapping("/{certificateId}/export-pem")
@@ -85,5 +85,18 @@ class CaCertificateController {
             service.renewCaCertificate(caCertificateFormGUI)
     }
 
+    @PostMapping("/create-and-export-pem")
+    ResponseEntity<Resource> exportAsFile(@RequestBody NewSignedCertificateForm newSignedCertificateForm){
 
+        LOG.info("Create and export signed cert called")
+        eu.outerheaven.certmanager.controller.entity.Certificate certificate = service.createSignedCert(newSignedCertificateForm)
+        Resource resource = service.exportGeneratedCert(certificate,"export.cer")
+
+        try{
+            ResponseEntity.ok().header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + "export.cer" + "\"").body(resource)
+        }catch(Exception exception){
+            LOG.error("Error while exporting file: " + exception)
+        }
+
+    }
 }

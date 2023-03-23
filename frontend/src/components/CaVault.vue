@@ -587,7 +587,7 @@
 
             <v-stepper v-model="e1">
               <v-stepper-header>
-                <template v-for="n in steps">
+                <template v-for="n in steps.choiceValue">
                   <v-stepper-step
                     :key="`${n}-step`"
                     :complete="e1 > n"
@@ -599,7 +599,7 @@
                   </v-stepper-step>
 
                   <v-divider
-                    v-if="n < steps.length"
+                    v-if="n < steps.choiceValue.length"
                     :key="n"
                   ></v-divider>
                 </template>
@@ -614,6 +614,7 @@
                     <v-select
                       v-model="steps"
                       :items="testItem"
+                      return-object
                       label="Select certificate destination"
                       item-value="choiceValue"
                       item-text="choiceName"
@@ -859,10 +860,17 @@
                   <v-btn
                     color="primary"
                     @click="postNewSigned"
+                    v-if="steps.choiceName==='Create a intermediate certificate'"
                   >
                     Finish
                   </v-btn>
-
+                  <v-btn
+                    color="primary"
+                    @click="postExportGeneratedSigned"
+                    v-if="steps.choiceName==='Create and export directly'"
+                  >
+                    Export
+                  </v-btn>
                   <v-btn
                     text
                     @click="closeSigned"
@@ -883,7 +891,7 @@
 
                   <v-btn
                     color="primary"
-                    @click="e1 = 5"
+                    @click=""
                   >
                     Continue
                   </v-btn>
@@ -956,6 +964,7 @@
 </style>
 
 <script>
+//TODO CANCEL BUTTON NOT WORKING
 import mySettingsObject from 'my-app-settings';
 let backendApiUrl = mySettingsObject.BACKEND_API_URL;
 export default {
@@ -986,7 +995,7 @@ export default {
       steps: [1,2,3],
       testItem:[ { choiceName: 'Create and deploy directly to keystore(s)', choiceValue: [1, 2, 4] },
         { choiceName: 'Create a intermediate certificate', choiceValue: [1, 2, 3] },
-        { choiceName: 'Create and export directly', choiceValue: [1, 2, 3, 4, 5] },
+        { choiceName: 'Create and export directly', choiceValue: [1, 2, 3] },
       ],
       newCa:{
         keyAlgorithm: '',
@@ -1149,6 +1158,32 @@ export default {
           this.alert = true;
           console.log(error)
         });
+    },
+    postExportGeneratedSigned() {
+      this.newSignedCert.signingCertId = this.selected[0].id
+      this.$axios
+        .post(`${backendApiUrl}/api/cavault/create-and-export-pem`, this.newSignedCert)
+        .then((response) => {
+          let filetodownload = response.headers['content-disposition'].split('filename=')[1].split(';')[0];
+          filetodownload = filetodownload.substring(1, filetodownload.length-1)
+          console.log(filetodownload);
+          var fileURL = window.URL.createObjectURL(new Blob([response.data]));
+          var fileLink = document.createElement('a');
+
+          fileLink.href = fileURL;
+          fileLink.setAttribute('download', filetodownload);
+          document.body.appendChild(fileLink);
+
+          fileLink.click();
+
+        })
+        .catch((error) => {
+          this.alert = true;
+          console.log(error)
+        });
+    },
+    currentStepsStatus(){
+      console.log(this.steps)
     },
     getStatusColor(status) {
       if (status === 'VALID') return 'green';

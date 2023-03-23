@@ -5,6 +5,7 @@ import javax.persistence.Entity
 import javax.persistence.GeneratedValue
 import javax.persistence.GenerationType
 import javax.persistence.Id
+import javax.persistence.ManyToMany
 import javax.persistence.OneToMany
 import javax.persistence.OneToOne
 
@@ -31,7 +32,7 @@ class Instance {
     @OneToOne(cascade = CascadeType.ALL, mappedBy = "instance", orphanRemoval = true)
     private InstanceAccessData instanceAccessData
 
-    @OneToMany
+    @ManyToMany
     private List<User> assignedUsers
 
     Long getId() {
