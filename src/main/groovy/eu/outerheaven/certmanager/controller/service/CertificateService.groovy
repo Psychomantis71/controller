@@ -296,7 +296,7 @@ class CertificateService {
                 certificateLoader.writeKeyToFileBase64Encoded(certificate.getPrivateKey(), folderName + "/" + filename)
             }
             String fullPath =  "./" + folderName + "/" + filename
-            LOG.info("Path to the file is " + fullPath)
+            LOG.debug("Path to the file is " + fullPath)
             path = Paths.get(folderName + "/" + filename)
             File file = new File(folderName + "/" + filename)
             byte[] fileContent = Files.readAllBytes(file.toPath())
@@ -328,7 +328,8 @@ class CertificateService {
                     certificateLoader.writeKeyToFileBase64Encoded(certificate.getPrivateKey(), folderName + "/certificate" + certificate.id.toString() +".cer" )
                 }
             })
-            zipFolder(new File("./" + folderName), new File("./" + folderName + ".zip"))
+            zipDirectory(new File("./" + folderName), "./" + folderName + ".zip")
+
 
             //String fullPath =  "./" + folderName + "/" + filename
             //LOG.info("Path to the file is " + fullPath)
@@ -347,39 +348,47 @@ class CertificateService {
         }
     }
 
-    void zipFolder(File srcFolder, File destZipFile) throws Exception {
-        try (FileOutputStream fileWriter = new FileOutputStream(destZipFile);
-             ZipOutputStream zip = new ZipOutputStream(fileWriter)) {
 
-            addFolderToZip(srcFolder, srcFolder, zip);
-        }
+     void zipDirectory(File fileToZip, String destZipFile) throws IOException {
+        FileOutputStream fos = new FileOutputStream(destZipFile);
+        ZipOutputStream zipOut = new ZipOutputStream(fos);
+
+        zipFile(fileToZip, fileToZip.getName(), zipOut);
+        zipOut.close();
+        fos.close();
     }
 
-    private void addFileToZip(File rootPath, File srcFile, ZipOutputStream zip) throws Exception {
-
-        if (srcFile.isDirectory()) {
-            addFolderToZip(rootPath, srcFile, zip);
-        } else {
-            byte[] buf = new byte[1024];
-            int len;
-            try ( FileInputStream input = new FileInputStream(srcFile) ) {
-                String name = srcFile.getPath();
-                name = name.replace(rootPath.getPath(), "");
-                System.out.println("Zip " + srcFile + "\n to " + name);
-                zip.putNextEntry(new ZipEntry(name));
-                while ((len = input.read(buf)) > 0) {
-                    zip.write(buf, 0, len);
-                }
+    private static void zipFile(File fileToZip, String fileName, ZipOutputStream zipOut) throws IOException {
+        if (fileToZip.isHidden()) {
+            return;
+        }
+        if (fileToZip.isDirectory()) {
+            if (fileName.endsWith("/")) {
+                //uncomment for folder zipping
+                //zipOut.putNextEntry(new ZipEntry(fileName));
+                zipOut.closeEntry();
+            } else {
+                //uncomment for folder zipping
+                //zipOut.putNextEntry(new ZipEntry(fileName + "/"));
+                zipOut.closeEntry();
             }
+            File[] children = fileToZip.listFiles();
+            for (File childFile : children) {
+                //Add fileToZip path + "/" in front of childFile.getName() to zip folders too
+                zipFile(childFile, childFile.getName(), zipOut);
+            }
+            return;
         }
-    }
-
-    private void addFolderToZip(File rootPath, File srcFolder, ZipOutputStream zip) throws Exception {
-        for (File fileName : srcFolder.listFiles()) {
-            addFileToZip(rootPath, fileName, zip);
+        FileInputStream fis = new FileInputStream(fileToZip);
+        ZipEntry zipEntry = new ZipEntry(fileName);
+        zipOut.putNextEntry(zipEntry);
+        byte[] bytes = new byte[1024];
+        int length;
+        while ((length = fis.read(bytes)) >= 0) {
+            zipOut.write(bytes, 0, length);
         }
+        fis.close();
     }
-
 
     //Frontend needs some key values to sort by, only for retrieve from port function!
     List<Certificate> assignIds(List<Certificate> certificates){
